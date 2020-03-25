@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "django-partisan"
+version = "0.1.0"
+description = "Framework to allow creating background tasks in django without MQ"
+authors = ["Ilya Chichak <ilyachch@gmail.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.6"
+Django = "2.2.1"
+psycopg2-binary = "2.8.2"
+pytz = "2019.1"
+setproctitle = "1.1.10"
+sqlparse = "0.3.0"
+
+[tool.poetry.dev-dependencies]
+pylint = "^2.4.4"
+black = "^19.10b0"
+
+[tool.black]
+exclude = """
+migrations
+"""
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
