@@ -6,6 +6,7 @@ import signal
 import sys
 import time
 from queue import Empty
+from typing import Any, List
 
 import setproctitle
 from django import db
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 running = False
 
 
-def worker_subprocess(tasks_queue,):
+def worker_subprocess(tasks_queue: mp.Queue,) -> None:
     logger.info("Parser started")
     setproctitle.setproctitle("background_worker/worker")
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
@@ -50,7 +51,7 @@ def worker_subprocess(tasks_queue,):
         logger.exception('got exception ({}), exiting'.format(str(err)))
 
 
-def exit_func(sig_num, _):
+def exit_func(sig_num: int, _: Any) -> None:
     global running
     logger.info("Killed with %s. Exiting...\n", sig_num)
     signal.signal(signal.SIGTERM, exit_func)
@@ -59,9 +60,9 @@ def exit_func(sig_num, _):
 
 
 class Command(BaseCommand):
-    def __init__(self):
-        self.queue = mp.Queue()
-        self.workers = []
+    def __init__(self) -> None:
+        self.queue: mp.Queue = mp.Queue()
+        self.workers: List[mp.Process] = []
 
         self.cleanup_counter = 0
         self.add2queue = True
@@ -72,10 +73,10 @@ class Command(BaseCommand):
         self.workers_count = settings.WORKERS_COUNT
         super(Command, self).__init__()
 
-    def add_arguments(self, parser):
+    def add_arguments(self, parser) -> None:  # type: ignore
         parser.add_argument('--min_queue_size')
 
-    def handle(self, *args, **options):
+    def handle(self, *args: Any, **options: Any) -> None:
         global running
 
         signal.signal(signal.SIGTERM, exit_func)
@@ -110,13 +111,13 @@ class Command(BaseCommand):
         logger.info("Exit after %d seconds", (datetime.datetime.now() - now).seconds)
         sys.exit()
 
-    def create_workers(self):
+    def create_workers(self) -> None:
         for _ in range(self.workers_count):
             p = mp.Process(target=worker_subprocess, args=(self.queue,))
             p.start()
             self.workers.append(p)
 
-    def manage_workers(self):
+    def manage_workers(self) -> None:
         nothing_to_do = True
         qsize = self.queue.qsize()
         if not self.add2queue and qsize <= self.min_queue_size:
@@ -134,7 +135,7 @@ class Command(BaseCommand):
         if nothing_to_do:
             time.sleep(2)
 
-    def manage_queue(self):
+    def manage_queue(self) -> None:
         # cleanup DB - close database connections periodically to clean Django ORM requests list in memory
         self.cleanup_counter += 1
         if self.cleanup_counter >= self.tasks_before_cleanup:
@@ -149,7 +150,7 @@ class Command(BaseCommand):
                     self.workers[i].start()
                     logger.warning("watchdog: worker#%d lost in space, restarted", i)
 
-    def clear_queue(self):
+    def clear_queue(self) -> None:
         if not self.queue.empty():
             logger.info("Flush tasks queue")
             flush_cnt = 0
@@ -164,7 +165,7 @@ class Command(BaseCommand):
                     break
             logger.info("Flushed %d requests", flush_cnt)
 
-    def stop_workers(self,):
+    def stop_workers(self,) -> None:
         logger.info("Stop workers")
         for _ in self.workers:
             self.queue.put(None)

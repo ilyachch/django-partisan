@@ -2,26 +2,39 @@ name: Testing
 
 # Controls when the action will run. Triggers the workflow on push or pull request
 # events but only for the master branch
-on:
-  push:
-    tags:
-      - '!refs/tags/*'
-    branches:
-      - '*'
+#on:
+#  push:
+#    tags:
+#      - '!refs/tags/*'
+#    branches:
+#      - '*'
+
+on: pull_request
 
 jobs:
   test_pr:
     name: Tests
     runs-on: ubuntu-latest
+    env:
+      PROJECT_FOLDER: django_partisan
     steps:
-      - uses: actions/checkout@master
-      - uses: actions/setup-python@master
-      - uses: dschep/install-poetry-action@v1.3
-      - uses: harmon758/postgresql-action@v1
+      - name: Getting code
+        uses: actions/checkout@master
+      - name: Getting Python
+        uses: actions/setup-python@master
+      - name: Getting Poetry
+        uses: dschep/install-poetry-action@v1.3
+      - name: Getting PostgreSQL
+        uses: harmon758/postgresql-action@v1
         with:
           postgresql db: 'test_db'
           postgresql user: 'postgres'
           postgresql password: 'postgres'
-      - run: poetry install
-      - run: poetry run python runtests.py
-      - run: poetry run black -S --diff --check .
+      - name: Installing dependancies
+        run: poetry install
+      - name: Running tests
+        run: poetry run python runtests.py
+      - name: Running codestyle checks
+        run: poetry run black -S --diff --check $PROJECT_FOLDER
+      - name: Running types checks
+        run: poetry run mypy $PROJECT_FOLDER
