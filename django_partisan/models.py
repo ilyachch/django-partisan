@@ -22,14 +22,14 @@ class TasksManager(models.Manager):
     def select_for_process(self, count: Optional[int] = None) -> QuerySet:
         base_qs = self.get_new_tasks(count).values_list('pk', flat=True)
         self.get_queryset().filter(id__in=list(base_qs)).update(
-            status={'status': Task.STATUS_PROC}
+            status={'status': Task.STATUS_IN_PROCESS}
         )
         return self.get_queryset().filter(id__in=list(base_qs))
 
 
 class Task(models.Model):
     STATUS_NEW = 'New'
-    STATUS_PROC = 'In Process'
+    STATUS_IN_PROCESS = 'In Process'
     STATUS_ERR = 'Error'
     STATUS_FIN = 'Finished'
     DEFAULT_STATUS = {'status': STATUS_NEW}

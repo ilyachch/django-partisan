@@ -10,11 +10,8 @@ class SimpleTaskProcessor(BaseTaskProcessor):
         return self.args[0]
 
 
-class SimpleHighPriorityTaskProcessor(BaseTaskProcessor):
+class SimpleHighPriorityTaskProcessor(SimpleTaskProcessor):
     PRIORITY = 100
-
-    def run(self):
-        return self.args[0]
 
 
 class TestTaskProcessor(TestCase):
@@ -81,6 +78,13 @@ class TestTaskModel(TestCase):
         for i in range(10):
             SimpleTaskProcessor(i).delay()
 
+    def test_task_verbose_name(self):
+        new_task = Task.objects.get_new_tasks(1).first()
+        self.assertEqual(
+            str(new_task),
+            "SimpleTaskProcessor ({'args': [0], 'kwargs': {}}) - {'status': 'New'}",
+        )
+
     def test_get_new_tasks(self):
         new_tasks = Task.objects.get_new_tasks()
         self.assertEqual(len(new_tasks), 10)
@@ -98,7 +102,7 @@ class TestTaskModel(TestCase):
         self.assertEqual(len(tasks), 5)
         task = tasks.first()
         self.assertEqual(task.status, {'status': 'In Process'})
-        in_process_tasks = tasks.filter(status__status=Task.STATUS_PROC)
+        in_process_tasks = tasks.filter(status__status=Task.STATUS_IN_PROCESS)
         self.assertEqual(len(in_process_tasks), 5)
 
     def test_task_complete(self):

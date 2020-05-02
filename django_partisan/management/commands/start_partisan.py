@@ -48,7 +48,7 @@ def worker_subprocess(tasks_queue: mp.Queue,) -> None:
             finally:
                 db.connections.close_all()
     except Exception as err:
-        logger.exception('got exception ({}), exiting'.format(str(err)))
+        logger.exception(f'got exception (%s), exiting', err)
 
 
 def exit_func(sig_num: int, _: Any) -> None:
@@ -101,8 +101,6 @@ class Command(BaseCommand):
             except Exception as err:
                 logger.exception("unexpected error: %s", err)
                 db.connections.close_all()
-                # logger.warning("unexpected error, going to restart")
-                # running = False
 
         self.clear_queue()
 
@@ -163,7 +161,7 @@ class Command(BaseCommand):
                     break
                 except Exception:
                     break
-            logger.info("Flushed %d requests", flush_cnt)
+            logger.info("Flushed %d tasks", flush_cnt)
 
     def stop_workers(self,) -> None:
         logger.info("Stop workers")
@@ -178,5 +176,4 @@ class Command(BaseCommand):
                     logger.warning("Have to kill process due to restart request.")
                     d.terminate()
                     time.sleep(0.2)
-            mp.active_children()
         self.queue.close()
