@@ -125,7 +125,7 @@ class Command(BaseCommand):
         if self.add2queue and qsize < self.max_queue_size:
             self.add2queue = False
 
-            task_objs = Task.objects.select_to_process(self.max_queue_size - qsize)
+            task_objs = Task.objects.select_for_process(self.max_queue_size - qsize)
 
             if len(task_objs) > 0:
                 nothing_to_do = False

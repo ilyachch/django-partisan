@@ -94,7 +94,7 @@ class TestTaskModel(TestCase):
         self.assertEqual(len(new_tasks), 5)
 
     def test_select_for_processing(self):
-        tasks = Task.objects.select_to_process(5)
+        tasks = Task.objects.select_for_process(5)
         self.assertEqual(len(tasks), 5)
         task = tasks.first()
         self.assertEqual(task.status, {'status': 'In Process'})

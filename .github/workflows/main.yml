@@ -2,21 +2,16 @@ name: Testing
 
 # Controls when the action will run. Triggers the workflow on push or pull request
 # events but only for the master branch
-#on:
-#  push:
-#    tags:
-#      - '!refs/tags/*'
-#    branches:
-#      - '*'
 
-on: pull_request
+on:
+  pull_request:
+    branches: master
+
 
 jobs:
   test_pr:
     name: Tests
     runs-on: ubuntu-latest
-    env:
-      PROJECT_FOLDER: django_partisan
     steps:
       - name: Getting code
         uses: actions/checkout@master
@@ -33,8 +28,8 @@ jobs:
       - name: Installing dependancies
         run: poetry install
       - name: Running tests
-        run: poetry run python runtests.py
+        run: make run_tests
       - name: Running codestyle checks
-        run: poetry run black -S --diff --check $PROJECT_FOLDER
+        run: make check_black
       - name: Running types checks
-        run: poetry run mypy $PROJECT_FOLDER
+        run: make check_mypy

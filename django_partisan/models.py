@@ -19,7 +19,7 @@ class TasksManager(models.Manager):
             return base_qs[:count]
         return base_qs
 
-    def select_to_process(self, count: Optional[int] = None) -> QuerySet:
+    def select_for_process(self, count: Optional[int] = None) -> QuerySet:
         base_qs = self.get_new_tasks(count).values_list('pk', flat=True)
         self.get_queryset().filter(id__in=list(base_qs)).update(
             status={'status': Task.STATUS_PROC}
@@ -35,9 +35,10 @@ class Task(models.Model):
     DEFAULT_STATUS = {'status': STATUS_NEW}
 
     created_at = models.DateTimeField(auto_now_add=True)  # type: ignore
+    updated_at = models.DateTimeField(auto_now=True)  # type: ignore
     processor_class = models.CharField(max_length=128)  # type: ignore
     priority = models.IntegerField(default=10)  # type: ignore
-    arguments = JSONField()
+    arguments = JSONField(default=dict)
     status = JSONField(default=get_default_status)
 
     objects = TasksManager()
@@ -45,17 +46,19 @@ class Task(models.Model):
     def run(self) -> Any:
         from django_partisan.processor import BaseTaskProcessor
 
+        args = self.arguments.get('args', [])
+        kwargs = self.arguments.get('kwargs', {})
         processor_class = BaseTaskProcessor.get_processor_class(self.processor_class)
-        processor = processor_class(*self.arguments['args'], **self.arguments['kwargs'])
+        processor = processor_class(*args, **kwargs)
         return processor.run()
 
     def complete(self) -> None:
         self.status = {'status': self.STATUS_FIN}
-        self.save()
+        self.save(update_fields=('status', 'updated_at'))
 
     def fail(self, err: Exception) -> None:
         self.status = {'status': self.STATUS_ERR, 'message': str(err)}
-        self.save()
+        self.save(update_fields=('status', 'updated_at'))
 
     class Meta:
         ordering = ('-priority',)
