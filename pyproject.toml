@@ -14,11 +14,12 @@ setproctitle = "1.1.10"
 sqlparse = "0.3.0"
 
 [tool.poetry.dev-dependencies]
-pylint = "^2.4.4"
 black = "^19.10b0"
 mypy = "^0.770"
 django-stubs = "^1.5.0"
 coverage = {version = "^5.1", extras = ["toml"]}
+
+# Black section
 
 [tool.black]
 exclude = """
@@ -27,6 +28,8 @@ exclude = """
     | tests
 )
 """
+
+# Coverage section
 
 [tool.coverage.run]
 source = [
@@ -45,6 +48,8 @@ exclude_lines = [
     'raise NotImplementedError()',
     '# pragma: no cover',
 ]
+
+# Build section
 
 [build-system]
 requires = ["poetry>=0.12"]
