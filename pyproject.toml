@@ -22,7 +22,10 @@ coverage = {version = "^5.1", extras = ["toml"]}
 
 [tool.black]
 exclude = """
-migrations
+(
+    migrations
+    | tests
+)
 """
 
 [tool.coverage.run]
@@ -39,7 +42,8 @@ directory = '.coverage_html'
 
 [tool.coverage.report]
 exclude_lines = [
-    'raise NotImplementedError()'
+    'raise NotImplementedError()',
+    '# pragma: no cover',
 ]
 
 [build-system]

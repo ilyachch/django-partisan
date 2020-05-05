@@ -23,7 +23,7 @@ class BaseTaskProcessor(abc.ABC):
     def run(self) -> Any:
         raise NotImplementedError()
 
-    def delay(self, priority: int = None) -> Task:
+    def delay(self, priority: int = 0) -> Task:
         task_data = {
             'processor_class': self.__class__.__name__,
             'arguments': {'args': self.args, 'kwargs': self.kwargs},

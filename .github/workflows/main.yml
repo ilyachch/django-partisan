@@ -25,7 +25,7 @@ jobs:
           postgresql db: 'test_db'
           postgresql user: 'postgres'
           postgresql password: 'postgres'
-      - name: Installing dependancies
+      - name: Installing dependencies
         run: poetry install
       - name: Running tests
         run: make run_tests
