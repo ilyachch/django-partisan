@@ -15,6 +15,7 @@ is_alive_side_effect = 'is_alive.side_effect'
 @patch('django_partisan.workers_manager.time')
 @patch('django_partisan.workers_manager.db')
 @patch('django_partisan.workers_manager.mp')
+@patch('django_partisan.workers_manager.Worker')
 class TestWorkersManager(TestCase):
 
     @patch('django_partisan.workers_manager.sys')
@@ -24,7 +25,7 @@ class TestWorkersManager(TestCase):
     @patch.object(WorkersManager, 'manage_queue')
     def test_partisan(
             self, manage_queue_mock, manage_workers_mock,
-            flush_queue_mock, stop_workers_mock, sys_mock,
+            flush_queue_mock, stop_workers_mock, sys_mock, worker_mock,
             mp_mock, db_mock, time_mock, task_mock, logger_mock
     ):
         manage_queue_mock.side_effect = [DatabaseError, None]
@@ -47,15 +48,15 @@ class TestWorkersManager(TestCase):
         sys_mock.exit.assert_called_once()
 
     def test_create_workers(
-            self, mp_mock, db_mock, time_mock, task_mock, logger_mock
+            self, worker_mock, mp_mock, db_mock, time_mock, task_mock, logger_mock
     ):
         test_workers_count = 4
         manager = WorkersManager(workers_count=test_workers_count)
         manager.create_workers()
-        self.assertEqual(mp_mock.Process.call_count, test_workers_count)
+        self.assertEqual(worker_mock.call_count, test_workers_count)
 
     def test_manage_queue_queue_is_full(
-            self, mp_mock, db_mock, time_mock, task_mock, logger_mock
+            self, worker_mock, mp_mock, db_mock, time_mock, task_mock, logger_mock
     ):
         manager = WorkersManager(workers_count=4, min_queue_size=4)
         queue_mock = Mock()
@@ -65,7 +66,7 @@ class TestWorkersManager(TestCase):
         time_mock.sleep.assert_called_once_with(2)
 
     def test_manage_queue_queue_to_be_filled(
-            self, mp_mock, db_mock, time_mock, task_mock, logger_mock
+            self, worker_mock, mp_mock, db_mock, time_mock, task_mock, logger_mock
     ):
         manager = WorkersManager(workers_count=4, min_queue_size=4, max_queue_size=8)
         queue_mock = Mock()
@@ -80,14 +81,14 @@ class TestWorkersManager(TestCase):
         time_mock.sleep.assert_not_called()
 
     def test_manage_workers(
-            self, mp_mock, db_mock, time_mock, task_mock, logger_mock
+            self, worker_mock, mp_mock, db_mock, time_mock, task_mock, logger_mock
     ):
         manager = WorkersManager(workers_count=4, )
         manager.manage_workers()
         db_mock.asser_not_called()
 
     def test_manage_workers_all_alive(
-            self, mp_mock, db_mock, time_mock, task_mock, logger_mock
+            self, worker_mock, mp_mock, db_mock, time_mock, task_mock, logger_mock
     ):
         manager = WorkersManager(workers_count=4, )
         manager.workers = [
@@ -102,7 +103,7 @@ class TestWorkersManager(TestCase):
         mp_mock.Process.assert_not_called()
 
     def test_manage_workers_half_dead(
-            self, mp_mock, db_mock, time_mock, task_mock, logger_mock
+            self, worker_mock, mp_mock, db_mock, time_mock, task_mock, logger_mock
     ):
         manager = WorkersManager(workers_count=4, )
         manager.workers = [
@@ -114,14 +115,14 @@ class TestWorkersManager(TestCase):
         manager.cleanup_counter = 50
         manager.manage_workers()
         db_mock.asser_was_called()
-        self.assertEqual(mp_mock.Process.call_count, 2)
+        self.assertEqual(worker_mock.call_count, 2)
         manager.workers[0].start.assert_not_called()
         manager.workers[1].start.assert_called()
         manager.workers[2].start.assert_not_called()
         manager.workers[3].start.assert_called()
 
     def test_flush_empty_queue(
-            self, mp_mock, db_mock, time_mock, task_mock, logger_mock
+            self, worker_mock, mp_mock, db_mock, time_mock, task_mock, logger_mock
     ):
         manager = WorkersManager()
         queue_mock = Mock()
@@ -132,7 +133,7 @@ class TestWorkersManager(TestCase):
         queue_mock.empty.assert_called()
 
     def test_flush_queue(
-            self, mp_mock, db_mock, time_mock, task_mock, logger_mock
+            self, worker_mock, mp_mock, db_mock, time_mock, task_mock, logger_mock
     ):
         manager = WorkersManager()
         queue_mock = Mock()
@@ -144,7 +145,7 @@ class TestWorkersManager(TestCase):
         )
 
     def test_flush_queue_empty(
-            self, mp_mock, db_mock, time_mock, task_mock, logger_mock
+            self, worker_mock, mp_mock, db_mock, time_mock, task_mock, logger_mock
     ):
         manager = WorkersManager()
         queue_mock = Mock()
@@ -157,7 +158,7 @@ class TestWorkersManager(TestCase):
         )
 
     def test_flush_queue_error(
-            self, mp_mock, db_mock, time_mock, task_mock, logger_mock
+            self, worker_mock, mp_mock, db_mock, time_mock, task_mock, logger_mock
     ):
         manager = WorkersManager()
         queue_mock = Mock()
@@ -170,7 +171,7 @@ class TestWorkersManager(TestCase):
         )
 
     def test_stop_workers(
-            self, mp_mock, db_mock, time_mock, task_mock, logger_mock
+            self, worker_mock, mp_mock, db_mock, time_mock, task_mock, logger_mock
     ):
         manager = WorkersManager(workers_count=3)
         manager.queue = Mock()

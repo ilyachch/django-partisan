@@ -11,6 +11,7 @@ import setproctitle
 from django import db
 from django.db import Error
 
+from django_partisan.models import Task
 from django_partisan.settings import (
     MIN_QUEUE_SIZE,
     MAX_QUEUE_SIZE,
@@ -18,8 +19,7 @@ from django_partisan.settings import (
     WORKERS_COUNT,
     SLEEP_DELAY_SECONDS,
 )
-from django_partisan.models import Task
-from django_partisan.worker import worker_subprocess
+from django_partisan.worker import Worker
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ class WorkersManager:
 
     def create_workers(self) -> None:
         for _ in range(self.workers_count):
-            p = mp.Process(target=worker_subprocess, args=(self.queue,))
+            p = Worker(self.queue)
             p.start()
             self.workers.append(p)
 
@@ -122,9 +122,7 @@ class WorkersManager:
             for i in range(len(self.workers)):  # check children
                 if not self.workers[i].is_alive():
                     self.workers[i].join()
-                    self.workers[i] = mp.Process(
-                        target=worker_subprocess, args=(self.queue,)
-                    )
+                    self.workers[i] = Worker(self.queue)
                     self.workers[i].start()
                     logger.warning("watchdog: worker#%d lost in space, restarted", i)
 
