@@ -8,7 +8,7 @@ WORKING_DIRECTORY = $(shell pwd)
 coverage_html: go_to_project_folder coverage_run coverage_html_report
 coverage_simple: go_to_project_folder coverage_run coverage_cmd_report
 make_checks: go_to_project_folder check_black check_mypy
-make_all_checks: go_to_project_folder run_tests make_checks
+make_all_checks: go_to_project_folder coverage_run coverage_cmd_report make_checks
 
 go_to_project_folder:
 	cd $(WORKING_DIRECTORY)

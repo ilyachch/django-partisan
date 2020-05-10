@@ -28,7 +28,9 @@ jobs:
       - name: Installing dependencies
         run: poetry install
       - name: Running tests
-        run: make run_tests
+        run: make coverage_run
+      - name: Running coverage check
+        run: make coverage_cmd_report
       - name: Running codestyle checks
         run: make check_black
       - name: Running types checks

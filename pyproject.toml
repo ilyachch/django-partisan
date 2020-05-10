@@ -44,6 +44,8 @@ omit = [
 directory = '.coverage_html'
 
 [tool.coverage.report]
+fail_under = 100
+
 exclude_lines = [
     'raise NotImplementedError()',
     '# pragma: no cover',
