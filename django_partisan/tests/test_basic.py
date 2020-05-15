@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from django_partisan.exceptions import WorkerClassNotFound
 from django_partisan.models import Task
@@ -26,7 +26,7 @@ class TestTaskProcessor(TestCase):
         db_task: Task = Task.objects.first()
         self.assertEqual(Task.objects.count(), 1)
         self.assertEqual(db_task.processor_class, 'SimpleTaskProcessor')
-        self.assertEqual(db_task.status, {'status': 'New'})
+        self.assertEqual(db_task.status, Task.STATUS_NEW)
         self.assertEqual(db_task.arguments, {'args': [value], 'kwargs': {}})
 
     def test_multiple_tasks_creation(self):
@@ -82,7 +82,7 @@ class TestTaskModel(TestCase):
         new_task = Task.objects.get_new_tasks(1).first()
         self.assertEqual(
             str(new_task),
-            "SimpleTaskProcessor ({'args': [0], 'kwargs': {}}) - {'status': 'New'}",
+            "SimpleTaskProcessor ({'args': [0], 'kwargs': {}}) - New",
         )
 
     def test_get_new_tasks(self):
@@ -99,19 +99,19 @@ class TestTaskModel(TestCase):
 
     def test_select_for_processing(self):
         tasks = Task.objects.select_for_process(5)
+        for task in tasks:
+            task.refresh_from_db()
+        self.assertTrue(all([task.status == Task.STATUS_IN_PROCESS for task in tasks]))
         self.assertEqual(len(tasks), 5)
-        task = tasks.first()
-        self.assertEqual(task.status, {'status': 'In Process'})
-        in_process_tasks = tasks.filter(status__status=Task.STATUS_IN_PROCESS)
-        self.assertEqual(len(in_process_tasks), 5)
 
     def test_task_complete(self):
         task = Task.objects.get_new_tasks().first()
         task.complete()
-        self.assertEqual(task.status, {'status': 'Finished'})
+        self.assertEqual(task.status, Task.STATUS_FINISHED)
 
     def test_task_fail(self):
         exception_text = 'Some exception text'
         task = Task.objects.get_new_tasks().first()
         task.fail(Exception(exception_text))
-        self.assertEqual(task.status, {'status': 'Error', 'message': exception_text})
+        self.assertEqual(task.status, Task.STATUS_ERROR)
+        self.assertEqual(task.extra, {'message': exception_text})

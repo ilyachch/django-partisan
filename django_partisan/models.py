@@ -1,12 +1,9 @@
-from typing import Dict, Optional, Any
+from typing import Optional, Any
 
 from django.contrib.postgres.fields import JSONField
-from django.db import models
+from django.db import models, transaction
 from django.db.models import QuerySet
-
-
-def get_default_status() -> Dict[str, str]:
-    return Task.DEFAULT_STATUS
+from django.utils import timezone
 
 
 class TasksManager(models.Manager):
@@ -14,32 +11,47 @@ class TasksManager(models.Manager):
         return QuerySet(self.model, using=self._db)
 
     def get_new_tasks(self, count: Optional[int] = None) -> QuerySet:
-        base_qs = self.get_queryset().filter(status__status=Task.STATUS_NEW)
+        base_qs = (
+            self.get_queryset()
+            .select_for_update()
+            .filter(status=Task.STATUS_NEW, execute_after__lte=timezone.now())
+        )
         if count is not None:
             return base_qs[:count]
         return base_qs
 
+    @transaction.atomic
     def select_for_process(self, count: Optional[int] = None) -> QuerySet:
-        base_qs = self.get_new_tasks(count).values_list('pk', flat=True)
-        self.get_queryset().filter(id__in=list(base_qs)).update(
-            status={'status': Task.STATUS_IN_PROCESS}
+        new_tasks_list = list(self.get_new_tasks(count).values_list('pk', flat=True))
+        selected_tasks = (
+            self.get_queryset().select_for_update().filter(id__in=new_tasks_list)
         )
-        return self.get_queryset().filter(id__in=list(base_qs))
+        self.get_queryset().select_for_update().filter(id__in=new_tasks_list).update(
+            status=Task.STATUS_IN_PROCESS
+        )
+        return selected_tasks
 
 
 class Task(models.Model):
-    STATUS_NEW = 'New'
-    STATUS_IN_PROCESS = 'In Process'
-    STATUS_ERR = 'Error'
-    STATUS_FIN = 'Finished'
-    DEFAULT_STATUS = {'status': STATUS_NEW}
+    STATUS_NEW = 'new'
+    STATUS_IN_PROCESS = 'in_process'
+    STATUS_ERROR = 'error'
+    STATUS_FINISHED = 'finished'
+    STATUS_CHOICES = (
+        (STATUS_NEW, 'New'),
+        (STATUS_IN_PROCESS, 'In Process'),
+        (STATUS_ERROR, 'Error'),
+        (STATUS_FINISHED, 'Finished'),
+    )
 
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_NEW)  # type: ignore
     created_at = models.DateTimeField(auto_now_add=True)  # type: ignore
     updated_at = models.DateTimeField(auto_now=True)  # type: ignore
     processor_class = models.CharField(max_length=128)  # type: ignore
     priority = models.IntegerField(default=10)  # type: ignore
+    execute_after = models.DateTimeField(default=timezone.now)  # type: ignore
     arguments = JSONField(default=dict)
-    status = JSONField(default=get_default_status)
+    extra = JSONField(null=True, blank=True)
 
     objects = TasksManager()
 
@@ -53,15 +65,18 @@ class Task(models.Model):
         return processor.run()
 
     def complete(self) -> None:
-        self.status = {'status': self.STATUS_FIN}
+        self.status = self.STATUS_FINISHED
         self.save(update_fields=('status', 'updated_at'))
 
     def fail(self, err: Exception) -> None:
-        self.status = {'status': self.STATUS_ERR, 'message': str(err)}
-        self.save(update_fields=('status', 'updated_at'))
+        self.status = self.STATUS_ERROR
+        self.extra = {'message': str(err)}
+        self.save(update_fields=('status', 'extra', 'updated_at'))
 
     class Meta:
         ordering = ('-priority',)
 
     def __str__(self) -> str:
-        return '{} ({}) - {}'.format(self.processor_class, self.arguments, self.status)
+        return '{} ({}) - {}'.format(
+            self.processor_class, self.arguments, self.get_status_display()  # type: ignore
+        )
