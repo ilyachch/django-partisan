@@ -1,5 +1,8 @@
-from django.test import TestCase, override_settings
+from unittest import mock
 
+from django.test import TestCase
+
+from django_partisan import settings
 from django_partisan.exceptions import WorkerClassNotFound
 from django_partisan.models import Task
 from django_partisan.processor import BaseTaskProcessor
@@ -79,39 +82,42 @@ class TestTaskModel(TestCase):
             SimpleTaskProcessor(i).delay()
 
     def test_task_verbose_name(self):
-        new_task = Task.objects.get_new_tasks(1).first()
+        new_task = Task.objects.first()
         self.assertEqual(
             str(new_task),
             "SimpleTaskProcessor ({'args': [0], 'kwargs': {}}) - New",
         )
 
-    def test_get_new_tasks(self):
-        new_tasks = Task.objects.get_new_tasks()
-        self.assertEqual(len(new_tasks), 10)
-        for task in Task.objects.all()[:5]:
-            task.complete()
-        new_tasks = Task.objects.get_new_tasks()
-        self.assertEqual(len(new_tasks), 5)
+    def test_select_for_processing_with_count(self):
+        tasks = Task.objects.select_for_process()
+        self.assertTrue(all([task.status == Task.STATUS_IN_PROCESS for task in tasks]))
+        self.assertEqual(len(tasks), 10)
 
-    def test_get_new_tasks_with_count(self):
-        new_tasks = Task.objects.get_new_tasks(5)
-        self.assertEqual(len(new_tasks), 5)
+    def test_reset_tasks_to_initial_status(self):
+        Task.objects.select_for_process(2)
+        self.assertNotEqual(Task.objects.filter(status=Task.STATUS_NEW).count(), 10)
+        Task.objects.reset_tasks_to_initial_status()
+        self.assertEqual(Task.objects.filter(status=Task.STATUS_NEW).count(), 10)
 
     def test_select_for_processing(self):
         tasks = Task.objects.select_for_process(5)
-        for task in tasks:
-            task.refresh_from_db()
         self.assertTrue(all([task.status == Task.STATUS_IN_PROCESS for task in tasks]))
         self.assertEqual(len(tasks), 5)
 
     def test_task_complete(self):
-        task = Task.objects.get_new_tasks().first()
+        task = Task.objects.select_for_process().first()
         task.complete()
         self.assertEqual(task.status, Task.STATUS_FINISHED)
 
     def test_task_fail(self):
         exception_text = 'Some exception text'
-        task = Task.objects.get_new_tasks().first()
+        task = Task.objects.select_for_process().first()
         task.fail(Exception(exception_text))
         self.assertEqual(task.status, Task.STATUS_ERROR)
         self.assertEqual(task.extra, {'message': exception_text})
+
+    def test_task_deling_on_complete(self):
+        task = Task.objects.select_for_process().first()
+        with mock.patch.object(settings, 'DELETE_TASKS_ON_COMPLETE', return_value=True):
+            task.complete()
+        self.assertEqual(Task.objects.count(), 9)

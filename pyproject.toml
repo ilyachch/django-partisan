@@ -36,6 +36,7 @@ source = [
     'django_partisan',
 ]
 omit = [
+    'django_partisan/tests/*',
     'django_partisan/apps.py',
     'django_partisan/settings.py',
 ]

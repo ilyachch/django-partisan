@@ -46,6 +46,7 @@ class TestWorkersManager(TestCase):
         flush_queue_mock.assert_called_once()
         stop_workers_mock.assert_called_once()
         sys_mock.exit.assert_called_once()
+        task_mock.objects.reset_tasks_to_initial_status.assert_called_once()
 
     def test_create_workers(
             self, worker_mock, mp_mock, db_mock, time_mock, task_mock, logger_mock

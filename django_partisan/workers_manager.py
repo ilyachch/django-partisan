@@ -69,6 +69,8 @@ class WorkersManager:
 
         running = True
 
+        Task.objects.reset_tasks_to_initial_status()
+
         while running:
             # noinspection PyBroadException
             try:

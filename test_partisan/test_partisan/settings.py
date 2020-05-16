@@ -1,3 +1,5 @@
+import multiprocessing as mp
+
 SECRET_KEY = 'fake-key'
 
 DEBUG = True
@@ -49,3 +51,11 @@ LOGGING = {
         'handlers': ['console'],
     }
 }
+
+MIN_QUEUE_SIZE = 2
+MAX_QUEUE_SIZE = 10
+CHECKS_BEFORE_CLEANUP = 50
+WORKERS_COUNT = mp.cpu_count()
+SLEEP_DELAY_SECONDS = 2
+TASKS_PER_WORKER_INSTANCE = None
+DELETE_TASKS_ON_COMPLETE = False

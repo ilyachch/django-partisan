@@ -5,24 +5,29 @@ from django.db import models, transaction
 from django.db.models import QuerySet
 from django.utils import timezone
 
+from django_partisan import settings
+
 
 class TasksManager(models.Manager):
     def get_queryset(self) -> QuerySet:
         return QuerySet(self.model, using=self._db)
 
-    def get_new_tasks(self, count: Optional[int] = None) -> QuerySet:
+    @transaction.atomic
+    def reset_tasks_to_initial_status(self) -> None:
+        self.get_queryset().select_for_update().filter(
+            status=Task.STATUS_IN_PROCESS
+        ).update(status=Task.STATUS_NEW)
+
+    @transaction.atomic
+    def select_for_process(self, count: Optional[int] = None) -> QuerySet:
         base_qs = (
             self.get_queryset()
             .select_for_update()
             .filter(status=Task.STATUS_NEW, execute_after__lte=timezone.now())
         )
         if count is not None:
-            return base_qs[:count]
-        return base_qs
-
-    @transaction.atomic
-    def select_for_process(self, count: Optional[int] = None) -> QuerySet:
-        new_tasks_list = list(self.get_new_tasks(count).values_list('pk', flat=True))
+            base_qs = base_qs[:count]
+        new_tasks_list = list(base_qs.values_list('pk', flat=True))
         selected_tasks = (
             self.get_queryset().select_for_update().filter(id__in=new_tasks_list)
         )
@@ -65,6 +70,9 @@ class Task(models.Model):
         return processor.run()
 
     def complete(self) -> None:
+        if settings.DELETE_TASKS_ON_COMPLETE:
+            self.delete()
+            return
         self.status = self.STATUS_FINISHED
         self.save(update_fields=('status', 'updated_at'))
 
