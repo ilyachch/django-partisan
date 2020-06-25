@@ -47,12 +47,14 @@ $ python manage.py start_partisan
 # Settings
 In your project settings you can define such params as:
 
-* `MIN_QUEUE_SIZE` `(int)` - if number of tasks in queue will reach this amount, queue manager will add new tasks (default = 2);
+* `MIN_QUEUE_SIZE` `(int)` - if number of tasks in queue will reach this amount, 
+queue manager will add new tasks (default = 2);
 * `MAX_QUEUE_SIZE` `(int)` - queue manager will fill queue up to this count of tasks (default = 10);
 * `CHECKS_BEFORE_CLEANUP` `(int)` - number of gatherings new tasks before cleaning database connections (default = 50);
 * `WORKERS_COUNT` `(int)` - number of workers, that would be instanced by workers manager (default = number of cores);
 * `SLEEP_DELAY_SECONDS` `(int)` - time to sleep between queue checks (default = 2);
-* `TASKS_PER_WORKER_INSTANCE` `(Optional[int])` - if is set, the worker will be restarted after this count of tasks processed (default = None);
+* `TASKS_PER_WORKER_INSTANCE` `(Optional[int])` - if is set, the worker will be restarted after this count of 
+tasks processed (default = None);
 * `DELETE_TASKS_ON_COMPLETE` `(bool)` - if True, task object will be deleted from db, if it successfully processed;
 
 It is possible to override some of this settings by cli args for `start_partisan`:
@@ -65,12 +67,16 @@ It is possible to override some of this settings by cli args for `start_partisan
 # API
 * `BaseTaskProcessor`
 
-    * `delay(*, priority: int = 0, execute_after: datetime = None)` accept only keyword arguments. It is possible to override priority of task and set execution datetime (task will not be processed before this time);
-    * `PRIORITY` - property of TaskProcessor. Tasks with higher priority would be taken for processing first;
-    * `UNIQUE_FOR_PARAMS` - boolean property of TaskProcessor. If `True`, it will ignore for task adding if task with exactly same args and kwargs is already in queue;
+    * `BaseTaskProcessor.delay(*, priority: int = 0, execute_after: datetime = None)` accept only keyword arguments. 
+    It is possible to override priority of task and set execution datetime (task will not be processed before this time);
+    * `BaseTaskProcessor.PRIORITY` - property of TaskProcessor. The lower the number, the higher the priority. 
+    Tasks with higher priority would be taken for processing first;
+    * `BaseTaskProcessor.UNIQUE_FOR_PARAMS` - boolean property of TaskProcessor. If `True`, it will ignore for 
+    task adding if task with exactly same args and kwargs is already in queue;
     
     
 # Some behavior features
 * This tool works only with PostgreSQL, as it supports `JSONField`
 * After Manager process got a kill signal, it will wait for workers to finish their jobs, and gracefully shut down them;
-* If for some reason Manager process was killed without gracefull shut down, after restart it will take for work tasks, that were not finished and only after them it will take all other tasks;
+* If for some reason Manager process was killed without gracefull shut down, 
+after restart it will take for work tasks, that were not finished and only after them it will take all other tasks;

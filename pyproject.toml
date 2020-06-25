@@ -4,6 +4,15 @@ version = "1.0.0"
 description = "Framework to allow creating background tasks in django without MQ"
 authors = ["Ilya Chichak <ilyachch@gmail.com>"]
 license = "MIT"
+readme = "README.md"
+repository = "https://github.com/ilyachch/django-partisan"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Django",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3 :: Only",
+    "Typing :: Typed"
+]
 
 [tool.poetry.dependencies]
 python = "^3.6"
