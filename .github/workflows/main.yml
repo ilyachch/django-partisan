@@ -17,6 +17,13 @@ jobs:
         uses: actions/checkout@master
       - name: Getting Python
         uses: actions/setup-python@master
+      - name: Cache pip
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - name: Getting Poetry
         uses: dschep/install-poetry-action@v1.3
       - name: Getting PostgreSQL
@@ -35,3 +42,20 @@ jobs:
         run: make check_black
       - name: Running types checks
         run: make check_mypy
+      - name: Generate coverage report
+        run: make coverage_xml_report
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
+          flags: pull_requests
+      - name: Check if pyproject is changed
+        uses: technote-space/get-diff-action@v1
+        id: git_diff
+        with:
+          SUFFIX_FILTER: .toml
+      - name: Fail if pyproject is not changed
+        if: ${{ steps.git_diff.outputs.count != 1 }}
+        run: exit 1
+

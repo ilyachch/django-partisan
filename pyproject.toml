@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-partisan"
-version = "0.1.0"
+version = "0.99.99"
 description = "Framework to allow creating background tasks in django without MQ"
 authors = ["Ilya Chichak <ilyachch@gmail.com>"]
 license = "MIT"
@@ -37,6 +37,7 @@ source = [
 ]
 omit = [
     'django_partisan/tests/*',
+    'django_partisan/migrations/*',
     'django_partisan/apps.py',
     'django_partisan/settings.py',
 ]

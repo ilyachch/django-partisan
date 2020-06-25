@@ -34,7 +34,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--sleep_delay_seconds',
             type=int,
-            help='Time in seconds, to sleep bef††ore the next tasks presence check',
+            help='Time in seconds, to sleep before the next tasks presence check',
         )
 
     def handle(self, *args: Any, **options: Any) -> None:

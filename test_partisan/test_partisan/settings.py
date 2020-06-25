@@ -1,4 +1,5 @@
 import multiprocessing as mp
+import os
 
 SECRET_KEY = 'fake-key'
 
@@ -35,22 +36,23 @@ DATABASES = {
     }
 }
 
-LOGGING = {
-    'version': 1,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
+if bool(os.getenv('LOG_SQL', False)):
+    LOGGING = {
+        'version': 1,
+        'handlers': {
+            'console': {
+                'class': 'logging.StreamHandler',
+            },
         },
-    },
-    'loggers': {
-        'django.db.backends': {
-            'level': 'DEBUG',
+        'loggers': {
+            'django.db.backends': {
+                'level': 'DEBUG',
+            },
         },
-    },
-    'root': {
-        'handlers': ['console'],
+        'root': {
+            'handlers': ['console'],
+        }
     }
-}
 
 MIN_QUEUE_SIZE = 2
 MAX_QUEUE_SIZE = 10
