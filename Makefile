@@ -42,12 +42,12 @@ coverage_cmd_report:
 	poetry run coverage report
 
 # Releasing
-major_release: bump_major_release commit_version tag
-minor_release: bump_minor_release commit_version tag
-patch_release: bump_patch_release commit_version tag
+major_release: bump_major_release commit_version
+minor_release: bump_minor_release commit_version
+patch_release: bump_patch_release commit_version
 
 commit_version:
-	git commit -a -m "`poetry version`"
+	@git commit -a -m "`poetry version`"
 
 bump_major_release:
 	poetry version major
@@ -60,7 +60,7 @@ bump_patch_release:
 
 release:
 	@poetry build
-	poetry publish -r testpypi -u $(USERNAME) -p $(TOKEN)
+	@poetry publish -u $(USERNAME) -p $(TOKEN)
 
 # Other
 clean:
