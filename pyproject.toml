@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-partisan"
-version = "1.0"
+version = "1.1"
 description = "Framework to allow creating background tasks in django without MQ"
 authors = ["Ilya Chichak <ilyachch@gmail.com>"]
 license = "MIT"
@@ -58,7 +58,6 @@ directory = '.coverage_html'
 fail_under = 100
 
 exclude_lines = [
-    'raise NotImplementedError()',
     '# pragma: no cover',
 ]
 

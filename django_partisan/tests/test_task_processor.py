@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.test import TestCase
 from django.utils import timezone
 
-from django_partisan.exceptions import WorkerClassNotFound
+from django_partisan.exceptions import ProcessorClassNotFound
 from django_partisan.models import Task
 from django_partisan.processor import BaseTaskProcessor
 
@@ -82,7 +82,7 @@ class TestTaskProcessor(TestCase):
             arguments={'args': [], 'kwargs': {}},
         )
         task_obj: Task = Task.objects.first()
-        with self.assertRaises(WorkerClassNotFound):
+        with self.assertRaises(ProcessorClassNotFound):
             BaseTaskProcessor.get_processor_class(task_obj.processor_class)
 
     def test_run_from_model(self):

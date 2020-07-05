@@ -15,11 +15,14 @@ Run migrate command:
 $ python manage.py migrate
 ```
 
-Write your task:
+Write your task and register it:
 ```python3
 # partisan_tasks.py
 from django_partisan.processor import BaseTaskProcessor
+from django_partisan import registry
 
+
+@registry.register
 class MyProcessor(BaseTaskProcessor):
     PRIORITY = 5  # Optional, by default 10
     UNIQUE_FOR_PARAMS = True  # Optional, by default True
@@ -32,6 +35,7 @@ class MyProcessor(BaseTaskProcessor):
 And then pospone this task:
 ```python3
 from partisan_tasks import MyProcessor
+
 
 def do_something_and_postpone_task(*args, **kwargs):
     MyProcessor(args, kwargs).delay()
