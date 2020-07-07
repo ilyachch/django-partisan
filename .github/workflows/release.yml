@@ -4,14 +4,23 @@ on:
   push:
     branches:
       - master
-    tags:
-      - "v*"
+    paths:
+      - '**.py'
 
 jobs:
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     name: Release
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
     steps:
       - name: Getting code
         uses: actions/checkout@master
@@ -20,20 +29,18 @@ jobs:
       - name: Cache pip
         uses: actions/cache@v2
         with:
-          path: ~/.cache/pip
+          path: .venv
           key: ${{ runner.os }}-pip-${{ hashFiles('poetry.lock') }}
           restore-keys: |
             ${{ runner.os }}-pip-
       - name: Getting Poetry
         uses: dschep/install-poetry-action@v1.3
-      - name: Getting PostgreSQL
-        uses: harmon758/postgresql-action@v1
-        with:
-          postgresql db: 'test_db'
-          postgresql user: 'postgres'
-          postgresql password: 'postgres'
+      - name: Config Poetry
+        run: |
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
       - name: Installing dependencies
-        run: poetry install
+        run: poetry install --no-root
       - name: Running tests
         run: make coverage_run
       - name: Running coverage check

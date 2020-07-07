@@ -12,6 +12,15 @@ jobs:
   test_pr:
     name: Tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
     steps:
       - name: Getting code
         uses: actions/checkout@master
@@ -20,20 +29,18 @@ jobs:
       - name: Cache pip
         uses: actions/cache@v2
         with:
-          path: ~/.cache/pip
+          path: .venv
           key: ${{ runner.os }}-pip-${{ hashFiles('poetry.lock') }}
           restore-keys: |
             ${{ runner.os }}-pip-
       - name: Getting Poetry
         uses: dschep/install-poetry-action@v1.3
-      - name: Getting PostgreSQL
-        uses: harmon758/postgresql-action@v1
-        with:
-          postgresql db: 'test_db'
-          postgresql user: 'postgres'
-          postgresql password: 'postgres'
+      - name: Config Poetry
+        run: |
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
       - name: Installing dependencies
-        run: poetry install
+        run: poetry install --no-root
       - name: Running tests
         run: make coverage_run
       - name: Running coverage check
@@ -52,10 +59,15 @@ jobs:
           flags: pull_requests
       - name: Check if pyproject is changed
         uses: technote-space/get-diff-action@v1
-        id: git_diff
+        id: pyproject_is_changed
         with:
           SUFFIX_FILTER: .toml
-      - name: Fail if pyproject is not changed
-        if: ${{ steps.git_diff.outputs.count != 1 }}
+      - name: Check if python files are changed
+        uses: technote-space/get-diff-action@v1
+        id: python_files_are_changed
+        with:
+          PREFIX_FILTER: django_partisan
+      - name: Fail if pyproject is not changed and files are changed
+        if: ${{ steps.pyproject_is_changed.outputs.count != 1 && steps.python_files_are_changed.outputs.count == 1 }}
         run: exit 1
 

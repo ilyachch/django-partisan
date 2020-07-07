@@ -15,31 +15,31 @@ go_to_project_folder:
 
 # Tools section
 run_black:
-	poetry run black -S $(PROJECT_FOLDER)
+	@poetry run black -S $(PROJECT_FOLDER)
 
 # Tests section
 run_tests:
-	poetry run test_partisan/manage.py test $(PROJECT_FOLDER)
+	@poetry run test_partisan/manage.py test $(PROJECT_FOLDER)
 
 # Linters section
 check_black:
-	poetry run black -S --diff --check $(PROJECT_FOLDER)
+	@poetry run black -S --diff --check $(PROJECT_FOLDER)
 
 check_mypy:
-	poetry run mypy $(PROJECT_FOLDER)
+	@poetry run mypy $(PROJECT_FOLDER)
 
 # Coverage section
 coverage_run:
-	poetry run coverage run test_partisan/manage.py test $(PROJECT_FOLDER)
+	@poetry run coverage run test_partisan/manage.py test $(PROJECT_FOLDER)
 
 coverage_html_report:
-	poetry run coverage html
+	@poetry run coverage html
 
 coverage_xml_report:
-	poetry run coverage xml
+	@poetry run coverage xml
 
 coverage_cmd_report:
-	poetry run coverage report
+	@poetry run coverage report
 
 # Releasing
 major_release: bump_major_release commit_version
@@ -50,13 +50,13 @@ commit_version:
 	@git commit -a -m "`poetry version`"
 
 bump_major_release:
-	poetry version major
+	@poetry version major
 
 bump_minor_release:
-	poetry version minor
+	@poetry version minor
 
 bump_patch_release:
-	poetry version patch
+	@poetry version patch
 
 release:
 	@poetry build
@@ -67,3 +67,6 @@ clean:
 	@rm -rf dist
 	@rm -rf *.egg-info
 	@rm -rf ./coverage.xml
+	@rm -rf .mypy_cache
+	@rm -rf .coverage
+	@rm -rf .coverage_html
