@@ -1,4 +1,4 @@
-from typing import Optional, Any
+from typing import Optional, Any, Type, TYPE_CHECKING
 
 from django.contrib.postgres.fields import JSONField
 from django.db import models, transaction
@@ -6,6 +6,9 @@ from django.db.models import QuerySet
 from django.utils import timezone
 
 from django_partisan import settings
+
+if TYPE_CHECKING:
+    from django_partisan.processor import BaseTaskProcessor  # pragma: no cover
 
 
 class TasksManager(models.Manager):
@@ -60,14 +63,29 @@ class Task(models.Model):
 
     objects = TasksManager()
 
-    def run(self) -> Any:
+    def get_initialized_processor(self) -> 'BaseTaskProcessor':
         from django_partisan.processor import BaseTaskProcessor
 
         args = self.arguments.get('args', [])
         kwargs = self.arguments.get('kwargs', {})
         processor_class = BaseTaskProcessor.get_processor_class(self.processor_class)
-        processor = processor_class(*args, **kwargs)
-        return processor.run()
+        return processor_class(*args, task=self, **kwargs)
+
+    def run(self) -> Any:
+        processor = self.get_initialized_processor()
+        retries_config = processor.RETRY_ON_ERROR_CONFIG
+        if retries_config is None:
+            return processor.run()
+
+        try:
+            return processor.run()
+        except tuple(retries_config.retry_on_errors):
+            try_num = self.tries_count + 1
+            if not retries_config.shoud_be_retried(try_num):
+                raise
+            self.tries_count = try_num
+            new_start_time_for_task = retries_config.get_new_datetime_for_delay(try_num)
+            processor.delay_for_retry(execute_after=new_start_time_for_task)
 
     def complete(self) -> None:
         if settings.DELETE_TASKS_ON_COMPLETE:
@@ -80,6 +98,22 @@ class Task(models.Model):
         self.status = self.STATUS_ERROR
         self.extra = {'message': str(err)}
         self.save(update_fields=('status', 'extra', 'updated_at'))
+
+    @property
+    def tries_count(self) -> int:
+        if self.extra is None:
+            return 0
+        return self.extra.get('retries', {'count': 0}).get('count')
+
+    @tries_count.setter
+    def tries_count(self, num: int) -> None:
+        if self.extra is None:
+            extra_data = {'retries': {'count': 0}}
+        else:
+            extra_data = self.extra.get('retries', {'count': 0})
+        extra_data.update({'retries': {'count': num}})
+        self.extra = extra_data
+        self.save(update_fields=['updated_at', 'extra'])
 
     class Meta:
         ordering = ('-priority',)

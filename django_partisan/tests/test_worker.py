@@ -16,7 +16,7 @@ class TestBackgroundWorker(TestCase):
         with patch.object(self.logger, 'info') as logger_info_mock:
             Worker(queue).run()
             logger_info_mock.assert_has_calls(
-                [call('Worker started'), call('Worker stopped'), ]
+                [call('Worker started'), call('Worker stopped'),]
             )
 
     def test_bad_task(self):
@@ -35,5 +35,7 @@ class TestBackgroundWorker(TestCase):
         queue.get.return_value = task_mock
         with patch.object(self.logger, 'info') as logger_mock:
             Worker(queue, tasks_before_death=5).run()
-            logger_mock.assert_has_calls([call('Processed %d of %d tasks. Exiting', 5, 5)])
+            logger_mock.assert_has_calls(
+                [call('Processed %d of %d tasks. Exiting', 5, 5)]
+            )
         self.assertEqual(queue.get.call_count, 5)

@@ -1,9 +1,10 @@
 import abc
 from datetime import datetime
-from typing import Type, Any
+from typing import Type, Any, Optional
 
 from django.db import transaction
 
+from django_partisan.config.configs import ErrorsHandleConfig
 from django_partisan.exceptions import ProcessorClassNotFound
 from django_partisan.models import Task
 from django_partisan.registry import registry
@@ -12,8 +13,10 @@ from django_partisan.registry import registry
 class BaseTaskProcessor(abc.ABC):
     PRIORITY: int = 10
     UNIQUE_FOR_PARAMS: bool = False
+    RETRY_ON_ERROR_CONFIG: Optional[ErrorsHandleConfig] = None
 
-    def __init__(self, *args: Any, **kwargs: Any):
+    def __init__(self, *args: Any, task: Task = None, **kwargs: Any):
+        self.task_obj = task
         self.args = args
         self.kwargs = kwargs
 
@@ -32,6 +35,10 @@ class BaseTaskProcessor(abc.ABC):
 
     @transaction.atomic
     def delay(self, *, priority: int = 0, execute_after: datetime = None) -> Task:
+        if self.task_obj is not None:
+            raise TypeError(
+                'TaskProcessor initialized with task object not supports delay() method'
+            )
         if self.UNIQUE_FOR_PARAMS:
             task_config = {
                 'arguments__args': self.args,
@@ -52,6 +59,17 @@ class BaseTaskProcessor(abc.ABC):
                 {'execute_after': execute_after,}
             )
         return Task.objects.create(**task_data)
+
+    @transaction.atomic
+    def delay_for_retry(self, *, execute_after: datetime = None) -> Task:
+        if self.task_obj is None:
+            raise TypeError(
+                'TaskProcessor initialized without task object not supports delay_for_retry() method'
+            )
+        self.task_obj.status = Task.STATUS_NEW
+        self.task_obj.execute_after = execute_after or datetime.now()
+        self.task_obj.save()
+        return self.task_obj
 
     @property
     def processor_name(self) -> str:

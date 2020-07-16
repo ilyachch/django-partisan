@@ -2,7 +2,8 @@ from django.test import TestCase
 
 from django_partisan import registry
 from django_partisan.exceptions import (
-    ProcessorClassNotFound, ProcessorClassAlreadyRegistered
+    ProcessorClassNotFound,
+    ProcessorClassAlreadyRegistered,
 )
 from django_partisan.models import Task
 from django_partisan.processor import BaseTaskProcessor
@@ -25,14 +26,15 @@ class TestTaskProcessor(TestCase):
         task_obj: Task = Task.objects.first()
         self.assertEqual(
             BaseTaskProcessor.get_processor_class(task_obj.processor_class),
-            RegisteredSimpleTaskProcessor
+            RegisteredSimpleTaskProcessor,
         )
 
     def test_register_decorator(self):
         registry.register(NotRegisteredSimpleTaskProcessor)
         self.assertTrue(
             registry.registry.is_processor_registered(
-                NotRegisteredSimpleTaskProcessor.__name__)
+                NotRegisteredSimpleTaskProcessor.__name__
+            )
         )
 
     def test_processor_is_already_registered(self):

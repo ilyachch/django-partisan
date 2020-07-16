@@ -13,6 +13,11 @@ class SimpleTaskProcessor(BaseTaskProcessor):
         return self.args[0]
 
 
+class SimpleTaskProcessorWithConfig(BaseTaskProcessor):
+    def run(self):
+        return self.args[0]
+
+
 class SimpleUniqueTaskProcessor(SimpleTaskProcessor):
     UNIQUE_FOR_PARAMS = True
 
@@ -90,3 +95,19 @@ class TestTaskProcessor(TestCase):
         SimpleTaskProcessor(value).delay()
         result = Task.objects.first().run()
         self.assertEqual(result, value)
+
+    def test_task_delay_for_retry_fails(self):
+        with self.assertRaises(TypeError):
+            SimpleTaskProcessor(10).delay_for_retry(execute_after=timezone.now())
+
+    def test_processor_initialized_with_task_obj_delay_fails(self):
+        task = SimpleTaskProcessor(10).delay()
+        with self.assertRaises(TypeError):
+            task.get_initialized_processor().delay()
+
+    def test_task_delay_for_retry(self):
+        SimpleTaskProcessor(10).delay()
+        task = Task.objects.select_for_process().first()
+        processor = task.get_initialized_processor()
+        processor.delay_for_retry()
+        self.assertEqual(task.STATUS_NEW, task.status)

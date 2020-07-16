@@ -22,17 +22,20 @@ class TestCommand(TestCase):
         manager_instance_mock.run_partisan.assert_called_once()
 
     def test_custom_launch(self, manager_mock):
-        call_command(self.command_name,
-                     f'--{self.min_queue_size}=1',
-                     f'--{self.max_queue_size}=2',
-                     f'--{self.checks_before_cleanup}=10',
-                     f'--{self.workers_count}=1',
-                     f'--{self.sleep_delay_seconds}=1')
+        call_command(
+            self.command_name,
+            f'--{self.min_queue_size}=1',
+            f'--{self.max_queue_size}=2',
+            f'--{self.checks_before_cleanup}=10',
+            f'--{self.workers_count}=1',
+            f'--{self.sleep_delay_seconds}=1',
+        )
         manager_mock.assert_called_with(
-            **{self.min_queue_size: 1,
-               self.max_queue_size: 2,
-               self.checks_before_cleanup: 10,
-               self.workers_count: 1,
-               self.sleep_delay_seconds: 1
-               }
+            **{
+                self.min_queue_size: 1,
+                self.max_queue_size: 2,
+                self.checks_before_cleanup: 10,
+                self.workers_count: 1,
+                self.sleep_delay_seconds: 1,
+            }
         )

@@ -4,12 +4,11 @@ from django.test import TestCase
 
 from django_partisan import settings
 from django_partisan.models import Task
-from django_partisan.processor import BaseTaskProcessor
-
-
-class TestTaskProcessor(BaseTaskProcessor):
-    def run(self):
-        return self.args[0]
+from django_partisan.tests.fixtures import (
+    TestTaskProcessor,
+    ConfiguredTestTaskProcessor,
+    ConfiguredFailingTestTaskProcessor,
+)
 
 
 class TestTaskModel(TestCase):
@@ -20,8 +19,7 @@ class TestTaskModel(TestCase):
     def test_task_verbose_name(self):
         new_task = Task.objects.first()
         self.assertEqual(
-            str(new_task),
-            "TestTaskProcessor ({'args': [0], 'kwargs': {}}) - New",
+            str(new_task), "TestTaskProcessor ({'args': [0], 'kwargs': {}}) - New",
         )
 
     def test_select_for_processing_with_count(self):
@@ -57,3 +55,35 @@ class TestTaskModel(TestCase):
         with mock.patch.object(settings, 'DELETE_TASKS_ON_COMPLETE', return_value=True):
             task.complete()
         self.assertEqual(Task.objects.count(), 9)
+
+    def test_tries_count(self):
+        task = Task.objects.select_for_process().first()
+        self.assertEqual(task.tries_count, 0)
+        task.tries_count = 3
+        self.assertEqual(task.tries_count, 3)
+        task.tries_count = 6
+        self.assertEqual(task.tries_count, 6)
+
+    def test_get_initialized_processor(self):
+        task = TestTaskProcessor(10, test_key='test').delay()
+        processor = task.get_initialized_processor()
+        self.assertIsInstance(processor, TestTaskProcessor)
+        self.assertEqual(processor.task_obj.id, task.id)
+        self.assertEqual(processor.args, (10,))
+        self.assertEqual(processor.kwargs, {'test_key': 'test'})
+
+    def test_configured_processor_task_run(self):
+        task = ConfiguredTestTaskProcessor(10).delay()
+        self.assertEqual(task.run(), 10)
+
+    def test_configured_processor_task_run_redelayed(self):
+        task = ConfiguredFailingTestTaskProcessor(10).delay()
+        task.run()
+        self.assertEqual(task.tries_count, 1)
+        self.assertEqual(task.status, Task.STATUS_NEW)
+
+    def test_configured_processor_task_run_fails(self):
+        task = ConfiguredFailingTestTaskProcessor(10).delay()
+        task.tries_count = 5
+        with self.assertRaises(ValueError):
+            task.run()
