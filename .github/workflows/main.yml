@@ -22,7 +22,7 @@ jobs:
           - 5432:5432
     steps:
       - name: Getting code
-        uses: actions/checkout@master
+        uses: actions/checkout@v1
       - name: Getting Python
         uses: actions/setup-python@master
         with:
@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Getting code
-        uses: actions/checkout@master
+        uses: actions/checkout@v1
       - name: Getting Python
         uses: actions/setup-python@master
       - name: Cache pip
@@ -91,7 +91,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Getting code
-        uses: actions/checkout@master
+        uses: actions/checkout@v1
       - name: Getting Python
         uses: actions/setup-python@master
       - name: Cache pip
@@ -117,7 +117,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Getting code
-        uses: actions/checkout@master
+        uses: actions/checkout@v1
       - name: Getting Python
         uses: actions/setup-python@master
       - name: Getting Poetry
