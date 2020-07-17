@@ -3,6 +3,8 @@
 Framework to allow creating background tasks in django without MQ
 
 # Usage
+
+## General usage
 Install app with:
 ```
 $ pip install django-partisan
@@ -16,7 +18,7 @@ $ python manage.py migrate
 ```
 
 Write your task and register it:
-```python3
+```python
 # partisan_tasks.py
 from django_partisan.processor import BaseTaskProcessor
 from django_partisan import registry
@@ -33,7 +35,7 @@ class MyProcessor(BaseTaskProcessor):
 ```
 
 And then pospone this task:
-```python3
+```python
 from partisan_tasks import MyProcessor
 
 
@@ -42,11 +44,45 @@ def do_something_and_postpone_task(*args, **kwargs):
 
 ```
 
-To start tasks processing you should lauch workers:
+To start tasks processing you should start workers:
 
 ```
 $ python manage.py start_partisan
 ``` 
+
+## Advanced
+
+### Errors handling
+You can set for task processor special config, that is managing, how to handle errors:
+```python
+from django_partisan.config.configs import ErrorsHandleConfig
+from django_partisan.config import const
+from django_partisan.processor import BaseTaskProcessor
+from django_partisan import registry
+
+@registry.register
+class MyProcessor(BaseTaskProcessor):
+    RETRY_ON_ERROR_CONFIG = ErrorsHandleConfig(
+        retry_on_errors=[TimeoutError,], 
+        retries_count=3, retry_pause=3,
+        retry_pause_strategy=const.DELAY_STRATEGY_INCREMENTAL
+    )
+    def run(self) -> Any:
+        do_something(*self.args, **self.kwargs)
+``` 
+
+With such configuration, the task will be redelayed if `TimeoutError` will be rised for 3 times with 3 sec pause.
+
+`ErrorsHandleConfig` params:
+ * `retry_on_errors` - list of exceptions;
+ * `retries_count` - positive int. Task will be redelayed for `retries_count` times if any of errors will be rised;
+ * `retry_pause` - positive int. Time in seconds to wait before renew task processing;
+ * `retry_pause_strategy` - one of options: `django_partisan.config.const.DELAY_STRATEGY_INCREMENTAL`, 
+ `django_partisan.config.const.DELAY_STRATEGY_CONSTANT`. By default - `DELAY_STRATEGY_CONSTANT`. If is set to `DELAY_STRATEGY_CONSTANT` - 
+ on error task will be redelayed with `retry_pause` seconds gap every time. If is set to `DELAY_STRATEGY_INCREMENTAL` - 
+ every next time task will be redelayed with increasing by `retry_pause` time gap 
+ (with `retry_pause = 3`, and `retries_count = 3` it will redelay for 3, 6, 9 seconds and then fail). 
+
 
 # Settings
 In your project settings you can define such params as:

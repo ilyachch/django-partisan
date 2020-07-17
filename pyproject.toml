@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-partisan"
-version = "1.2"
+version = "1.2.1"
 description = "Framework to allow creating background tasks in django without MQ"
 authors = ["Ilya Chichak <ilyachch@gmail.com>"]
 license = "MIT"
