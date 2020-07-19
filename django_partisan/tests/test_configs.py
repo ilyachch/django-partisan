@@ -1,15 +1,16 @@
 from unittest import TestCase
 
-from django.conf import settings
 from django.utils import timezone
 
-from django_partisan.config.configs import ErrorsHandleConfig
 from django_partisan.config import const
+from django_partisan.config.processor_configs import ErrorsHandleConfig, PostponeConfig
+from django_partisan.exceptions import PostponeTask
+from django_partisan import settings
 
 
 class TestErrorsHandleConfig(TestCase):
     normal_config = {
-        'retry_on_errors': [ValueError, TabError],
+        'retry_on_errors': (ValueError, TabError),
         'retries_count': 2,
         'retry_pause': 5,
         'retry_pause_strategy': const.DELAY_STRATEGY_CONSTANT,
@@ -51,7 +52,7 @@ class TestErrorsHandleConfig(TestCase):
     def test_config_get_new_datetime_for_delay_constant(self):
         config = ErrorsHandleConfig(**self.normal_config)
         now = timezone.now().timestamp()
-        new_date = config.get_new_datetime_for_delay(2)
+        new_date = config.get_new_datetime_for_retry(2)
         self.assertEqual(round(new_date.timestamp() - now), 5)
 
     def test_config_get_new_datetime_for_delay_incremental(self):
@@ -62,7 +63,7 @@ class TestErrorsHandleConfig(TestCase):
             }
         )
         now = timezone.now().timestamp()
-        new_date = config.get_new_datetime_for_delay(2)
+        new_date = config.get_new_datetime_for_retry(2)
         self.assertEqual(round(new_date.timestamp() - now), 10)
 
     def test_config_get_new_datetime_for_delay_error(self):
@@ -74,4 +75,25 @@ class TestErrorsHandleConfig(TestCase):
         )
         now = timezone.now().timestamp()
         with self.assertRaises(RuntimeError):
-            new_date = config.get_new_datetime_for_delay(5)
+            new_date = config.get_new_datetime_for_retry(5)
+
+
+class TestPostponeConfig(TestCase):
+    def test_get_new_datetime_for_postpone_not_set_in_signal(self):
+        config = PostponeConfig(max_postpones=10)
+        now = timezone.now().timestamp()
+        new_datetime_for_postpone = config.get_new_datetime_for_postpone(
+            PostponeTask()
+        ).timestamp()
+        self.assertEqual(
+            round(new_datetime_for_postpone - now),
+            settings.DEFAULT_POSTPONE_DELAY_SECONDS,
+        )
+
+    def test_get_new_datetime_for_postpone_set_in_signal(self):
+        config = PostponeConfig(max_postpones=10)
+        now = timezone.now().timestamp()
+        new_datetime_for_postpone = config.get_new_datetime_for_postpone(
+            PostponeTask(10)
+        ).timestamp()
+        self.assertEqual(round(new_datetime_for_postpone - now), 10)

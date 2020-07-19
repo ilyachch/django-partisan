@@ -1,6 +1,8 @@
-from typing import Any
+from typing import Any, Optional
 
 from django.core.exceptions import ImproperlyConfigured
+
+from django_partisan.settings import DEFAULT_POSTPONE_DELAY_SECONDS
 
 
 class PartisanException(Exception):
@@ -28,3 +30,20 @@ class ProcessorClassNotFound(ProcessorClassException):
 
 class ProcessorClassAlreadyRegistered(ProcessorClassException):
     message = 'Processor class {} already registered'
+
+
+class Postpone(Exception):
+    """Base Exception for postponing"""
+
+
+class PostponeTask(Postpone):
+    def __init__(self, postpone_for_seconds: Optional[int] = None) -> None:
+        self.postpone_for_seconds = (
+            postpone_for_seconds or DEFAULT_POSTPONE_DELAY_SECONDS
+        )
+        super().__init__()
+
+
+class MaxPostponesReached(Postpone):
+    def __init__(self, max_tries: int) -> None:
+        super().__init__(f'Maximum postpones ({max_tries}) reached. Failing')

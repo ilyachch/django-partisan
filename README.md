@@ -55,10 +55,47 @@ $ python manage.py start_partisan
 
 ## Advanced
 
+### Postpone tasks
+
+You can postpone task by raising special exception `PostponeTask`:
+
+Also you can manage posponing delay by setting `DEFAULT_POSTPONE_DELAY_SECONDS` 
+in your `settings.py` (by default - 5 seconds) or pass it to `PostponeTask`:
+```python
+from django_partisan.exceptions import PostponeTask
+
+def do_something():
+    raise PostponeTask(300)  # 5 minutes
+
+```
+It's possible to configure postponing rules for every single processor. 
+Just define `POSTPONE_CONFIG` in your processor class as instance of `PostponeConfig`:
+```python
+from django_partisan.config.processor_configs import PostponeConfig
+from django_partisan.processor import BaseTaskProcessor
+from django_partisan import registry
+
+@registry.register
+class MyProcessor(BaseTaskProcessor):
+    POSTPONE_CONFIG = PostponeConfig(
+        max_postpones=5
+    )
+    def run(self) -> Any:
+        do_something(*self.args, **self.kwargs)
+
+```
+
+With such configuration the task will be postponed for 5 times and, if it will be tried to be postponed one more time,
+`MaxPostponesReached` exception will be rised.
+
+Also you can globally set maximum postpones in settings with `DEFAULT_POSTPONES_COUNT` in `settings.py` (by default - 15).
+It was made to make task processing finite. If you want to make your task be processed forever, until they would be finished,
+you can set it to `None`, but it is dangerous.
+
 ### Errors handling
 You can set for task processor special config, that is managing, how to handle errors:
 ```python
-from django_partisan.config.configs import ErrorsHandleConfig
+from django_partisan.config.processor_configs import ErrorsHandleConfig
 from django_partisan.config import const
 from django_partisan.processor import BaseTaskProcessor
 from django_partisan import registry

@@ -1,10 +1,12 @@
+from django.core.exceptions import ImproperlyConfigured
+from django.test import TestCase
+
 from django_partisan.exceptions import (
     ProcessorClassNotFound,
     ProcessorClassAlreadyRegistered,
     ProcessorClassException,
+    MaxPostponesReached,
 )
-from django.core.exceptions import ImproperlyConfigured
-from django.test import TestCase
 
 
 class TestExceptions(TestCase):
@@ -42,3 +44,11 @@ class TestExceptions(TestCase):
 
         with self.assertRaises(ImproperlyConfigured):
             raise BadException('')
+
+
+class TestPostponeExceptions(TestCase):
+    def test_correct_message(self):
+        with self.assertRaisesMessage(
+            MaxPostponesReached, 'Maximum postpones (15) reached. Failing'
+        ):
+            raise MaxPostponesReached(15)

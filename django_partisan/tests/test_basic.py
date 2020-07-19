@@ -1,6 +1,7 @@
 from unittest import mock
 
 from django.test import TestCase
+from django.utils import timezone
 
 from django_partisan import settings
 from django_partisan.models import Task
@@ -8,7 +9,10 @@ from django_partisan.tests.fixtures import (
     TestTaskProcessor,
     ConfiguredTestTaskProcessor,
     ConfiguredFailingTestTaskProcessor,
+    PostponableTestTaskProcessor,
+    PostponableConfiguredTestTaskProcessor,
 )
+from django_partisan.exceptions import MaxPostponesReached
 
 
 class TestTaskModel(TestCase):
@@ -86,4 +90,32 @@ class TestTaskModel(TestCase):
         task = ConfiguredFailingTestTaskProcessor(10).delay()
         task.tries_count = 5
         with self.assertRaises(ValueError):
+            task.run()
+
+    def test_postponable_processor_run(self):
+        task = PostponableTestTaskProcessor().delay()
+        task.run()
+        now = timezone.now().timestamp()
+        self.assertEqual(task.postpones_count, 1)
+        self.assertEqual(task.status, Task.STATUS_NEW)
+        self.assertEqual(round(task.execute_after.timestamp() - now), 15)
+
+    def test_postpones_count(self):
+        task = PostponableTestTaskProcessor().delay()
+        self.assertEqual(task.postpones_count, 0)
+        task.postpones_count = 3
+        self.assertEqual(task.postpones_count, 3)
+        task.postpones_count = 6
+        self.assertEqual(task.postpones_count, 6)
+
+    def test_max_postpones_reached_not_configured_processor(self):
+        task = PostponableTestTaskProcessor().delay()
+        task.postpones_count = settings.DEFAULT_POSTPONES_COUNT
+        with self.assertRaises(MaxPostponesReached):
+            task.run()
+
+    def test_max_postpones_reached_configured_processor(self):
+        task = PostponableConfiguredTestTaskProcessor().delay()
+        task.postpones_count = 5
+        with self.assertRaises(MaxPostponesReached):
             task.run()

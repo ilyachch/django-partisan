@@ -1,5 +1,6 @@
-from django_partisan.config.configs import ErrorsHandleConfig
+from django_partisan.config.processor_configs import ErrorsHandleConfig, PostponeConfig
 from django_partisan.processor import BaseTaskProcessor
+from django_partisan.exceptions import PostponeTask
 
 
 class TestTaskProcessor(BaseTaskProcessor):
@@ -23,3 +24,15 @@ class ConfiguredFailingTestTaskProcessor(BaseTaskProcessor):
 
     def run(self):
         raise ValueError()
+
+
+class PostponableTestTaskProcessor(BaseTaskProcessor):
+    def run(self):
+        raise PostponeTask(15)
+
+
+class PostponableConfiguredTestTaskProcessor(BaseTaskProcessor):
+    POSTPONE_CONFIG = PostponeConfig(max_postpones=5)
+
+    def run(self):
+        raise PostponeTask(15)

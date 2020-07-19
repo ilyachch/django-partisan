@@ -1,22 +1,23 @@
 from datetime import timedelta, datetime
-from typing import List, Type
+from typing import Type, Tuple
 
-from pydantic import BaseModel, validator, ValidationError
 from django.utils import timezone
+from pydantic import BaseModel, validator
 
 from django_partisan.config import const
+from django_partisan.exceptions import PostponeTask
 
 
 class ErrorsHandleConfig(BaseModel):
-    retry_on_errors: List[Type[Exception]]
+    retry_on_errors: Tuple[Type[Exception], ...]
     retries_count: int
     retry_pause: int
     retry_pause_strategy: str = const.DELAY_STRATEGY_CONSTANT
 
     def shoud_be_retried(self, try_num: int) -> bool:
-        return try_num - 1 < self.retries_count
+        return try_num <= self.retries_count
 
-    def get_new_datetime_for_delay(self, try_num: int) -> datetime:
+    def get_new_datetime_for_retry(self, try_num: int) -> datetime:
         if not self.shoud_be_retried(try_num):
             raise RuntimeError('Task should not be delayed, tries ended')
         now = timezone.now()
@@ -25,7 +26,7 @@ class ErrorsHandleConfig(BaseModel):
         return now + timedelta(seconds=(self.retry_pause * try_num))
 
     @validator('retry_on_errors')
-    def must_be_not_empty(cls, v: List) -> List:
+    def must_be_not_empty(cls, v: Tuple) -> Tuple:
         if len(v) == 0:
             raise ValueError('"retry_on_errors" should be defined and not empty')
         return v
@@ -50,3 +51,11 @@ class ErrorsHandleConfig(BaseModel):
         if v < 0:
             raise ValueError('"retry_pause" should be bigger then 0')
         return v
+
+
+class PostponeConfig(BaseModel):
+    max_postpones: int
+
+    def get_new_datetime_for_postpone(self, postpone_signal: PostponeTask) -> datetime:
+        now = timezone.now()
+        return now + timedelta(seconds=postpone_signal.postpone_for_seconds)

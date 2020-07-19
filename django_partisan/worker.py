@@ -7,6 +7,7 @@ from typing import Optional
 
 import setproctitle
 from django import db
+
 from django_partisan import settings
 
 logger = logging.getLogger(__name__)

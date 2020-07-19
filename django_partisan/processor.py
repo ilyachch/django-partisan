@@ -3,8 +3,9 @@ from datetime import datetime
 from typing import Type, Any, Optional
 
 from django.db import transaction
+from django.utils import timezone
 
-from django_partisan.config.configs import ErrorsHandleConfig
+from django_partisan.config.processor_configs import ErrorsHandleConfig, PostponeConfig
 from django_partisan.exceptions import ProcessorClassNotFound
 from django_partisan.models import Task
 from django_partisan.registry import registry
@@ -14,6 +15,7 @@ class BaseTaskProcessor(abc.ABC):
     PRIORITY: int = 10
     UNIQUE_FOR_PARAMS: bool = False
     RETRY_ON_ERROR_CONFIG: Optional[ErrorsHandleConfig] = None
+    POSTPONE_CONFIG: Optional[PostponeConfig] = None
 
     def __init__(self, *args: Any, task: Task = None, **kwargs: Any):
         self.task_obj = task
@@ -53,11 +55,8 @@ class BaseTaskProcessor(abc.ABC):
             'processor_class': self.processor_name,
             'arguments': {'args': self.args, 'kwargs': self.kwargs},
             'priority': priority or self.PRIORITY,
+            'execute_after': execute_after or timezone.now(),
         }
-        if execute_after is not None:
-            task_data.update(
-                {'execute_after': execute_after,}
-            )
         return Task.objects.create(**task_data)
 
     @transaction.atomic

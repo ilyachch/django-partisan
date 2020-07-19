@@ -1,4 +1,5 @@
-from typing import Optional, Any, Type, TYPE_CHECKING
+from datetime import timedelta
+from typing import Optional, Any, TYPE_CHECKING
 
 from django.contrib.postgres.fields import JSONField
 from django.db import models, transaction
@@ -6,6 +7,8 @@ from django.db.models import QuerySet
 from django.utils import timezone
 
 from django_partisan import settings
+from django_partisan.config.processor_configs import PostponeConfig, ErrorsHandleConfig
+from django_partisan.exceptions import PostponeTask, MaxPostponesReached
 
 if TYPE_CHECKING:
     from django_partisan.processor import BaseTaskProcessor  # pragma: no cover
@@ -74,18 +77,51 @@ class Task(models.Model):
     def run(self) -> Any:
         processor = self.get_initialized_processor()
         retries_config = processor.RETRY_ON_ERROR_CONFIG
-        if retries_config is None:
-            return processor.run()
+        postpones_config = processor.POSTPONE_CONFIG
+        errors_to_retry_on = (
+            retries_config.retry_on_errors if retries_config is not None else ()
+        )
 
         try:
             return processor.run()
-        except tuple(retries_config.retry_on_errors):
-            try_num = self.tries_count + 1
-            if not retries_config.shoud_be_retried(try_num):
-                raise
-            self.tries_count = try_num
-            new_start_time_for_task = retries_config.get_new_datetime_for_delay(try_num)
-            processor.delay_for_retry(execute_after=new_start_time_for_task)
+        except PostponeTask as postpone_signal:
+            self.handle_postpone(processor, postpones_config, postpone_signal)
+        except errors_to_retry_on as error_signal:
+            self.handle_error(processor, retries_config, error_signal)
+
+    def handle_postpone(
+        self,
+        processor: 'BaseTaskProcessor',
+        postpones_config: Optional[PostponeConfig],
+        postpone_signal: PostponeTask,
+    ) -> None:
+        postpone_num = self.postpones_count + 1
+        if (
+            postpones_config is not None
+            and postpone_num > postpones_config.max_postpones
+        ) or (
+            settings.DEFAULT_POSTPONES_COUNT is not None
+            and postpone_num > settings.DEFAULT_POSTPONES_COUNT
+        ):
+            raise MaxPostponesReached(postpone_num)
+        self.postpones_count = postpone_num
+        new_start_time_for_task = timezone.now() + timedelta(
+            seconds=postpone_signal.postpone_for_seconds
+        )
+        processor.delay_for_retry(execute_after=new_start_time_for_task)
+
+    def handle_error(
+        self,
+        processor: 'BaseTaskProcessor',
+        retries_config: Optional[ErrorsHandleConfig],
+        error_signal: Exception,
+    ) -> None:
+        try_num = self.tries_count + 1
+        if not retries_config or not retries_config.shoud_be_retried(try_num):
+            raise
+        self.tries_count = try_num
+        new_start_time_for_task = retries_config.get_new_datetime_for_retry(try_num)
+        processor.delay_for_retry(execute_after=new_start_time_for_task)
 
     def complete(self) -> None:
         if settings.DELETE_TASKS_ON_COMPLETE:
@@ -98,6 +134,22 @@ class Task(models.Model):
         self.status = self.STATUS_ERROR
         self.extra = {'message': str(err)}
         self.save(update_fields=('status', 'extra', 'updated_at'))
+
+    @property
+    def postpones_count(self) -> int:
+        if self.extra is None:
+            return 0
+        return self.extra.get('postpones', {'count': 0}).get('count')
+
+    @postpones_count.setter
+    def postpones_count(self, num: int) -> None:
+        if self.extra is None:
+            extra_data = {'postpones': {'count': 0}}
+        else:
+            extra_data = self.extra.get('postpones', {'count': 0})
+        extra_data.update({'postpones': {'count': num}})
+        self.extra = extra_data
+        self.save(update_fields=['updated_at', 'extra'])
 
     @property
     def tries_count(self) -> int:
