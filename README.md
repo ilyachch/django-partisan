@@ -1,5 +1,7 @@
 [![codecov](https://codecov.io/gh/ilyachch/django-partisan/branch/master/graph/badge.svg)](https://codecov.io/gh/ilyachch/django-partisan)
+
 [![PyPI version](https://badge.fury.io/py/django-partisan.svg)](https://pypi.org/project/django-partisan/)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/django-partisan)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/django-partisan.svg)](https://pypi.org/project/django-partisan/)
 
 # django-backgroud-tasks-framework
