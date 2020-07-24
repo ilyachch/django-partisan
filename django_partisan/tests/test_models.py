@@ -3,7 +3,8 @@ from unittest import mock
 from django.test import TestCase
 from django.utils import timezone
 
-from django_partisan import settings
+from django_partisan.settings import get_queue_settings
+from django_partisan.exceptions import MaxPostponesReached
 from django_partisan.models import Task
 from django_partisan.tests.fixtures import (
     TestTaskProcessor,
@@ -12,7 +13,8 @@ from django_partisan.tests.fixtures import (
     PostponableTestTaskProcessor,
     PostponableConfiguredTestTaskProcessor,
 )
-from django_partisan.exceptions import MaxPostponesReached
+
+settings = get_queue_settings()
 
 
 class TestTaskModel(TestCase):

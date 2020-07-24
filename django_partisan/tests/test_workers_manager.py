@@ -57,6 +57,12 @@ class TestWorkersManager(TestCase):
         sys_mock.exit.assert_called_once()
         task_mock.objects.reset_tasks_to_initial_status.assert_called_once()
 
+    def test_bad_settings(
+        self, worker_mock, mp_mock, db_mock, time_mock, task_mock, logger_mock
+    ):
+        with self.assertRaises(RuntimeError):
+            WorkersManager(queue_name='some_bad_queue_name')
+
     def test_create_workers(
         self, worker_mock, mp_mock, db_mock, time_mock, task_mock, logger_mock
     ):
@@ -86,7 +92,7 @@ class TestWorkersManager(TestCase):
         )
         manager.queue = queue_mock
         manager.manage_queue()
-        task_mock.objects.select_for_process.assert_called_with(6)
+        task_mock.objects.select_for_process.assert_called_with(6, 'default')
         self.assertEqual(queue_mock.put.call_count, 6)
         time_mock.sleep.assert_not_called()
 

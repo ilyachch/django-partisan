@@ -12,15 +12,20 @@ from django_partisan.registry import registry
 
 
 class BaseTaskProcessor(abc.ABC):
+    QUEUE: str = 'default'
     PRIORITY: int = 10
     UNIQUE_FOR_PARAMS: bool = False
     RETRY_ON_ERROR_CONFIG: Optional[ErrorsHandleConfig] = None
     POSTPONE_CONFIG: Optional[PostponeConfig] = None
 
-    def __init__(self, *args: Any, task: Task = None, **kwargs: Any):
-        self.task_obj = task
+    def __init__(self, *args: Any, **kwargs: Any):
+        self.task_obj: Optional[Task] = None
         self.args = args
         self.kwargs = kwargs
+
+    @abc.abstractmethod
+    def run(self) -> Any:
+        raise NotImplementedError()  # pragma: no cover
 
     @classmethod
     def get_processor_class(cls, processor_name: str) -> Type['BaseTaskProcessor']:
@@ -31,9 +36,16 @@ class BaseTaskProcessor(abc.ABC):
                 return subclass
         raise ProcessorClassNotFound(processor_name)
 
-    @abc.abstractmethod
-    def run(self) -> Any:
-        raise NotImplementedError()  # pragma: no cover
+    @classmethod
+    def get_initialized_processor(cls, task_obj: Task) -> 'BaseTaskProcessor':
+        processor = cls(
+            *task_obj.arguments.get('args', []), **task_obj.arguments.get('kwargs', {})
+        )
+        processor.set_task_object(task_obj)
+        return processor
+
+    def set_task_object(self, task_obj: Task) -> None:
+        self.task_obj = task_obj
 
     @transaction.atomic
     def delay(self, *, priority: int = 0, execute_after: datetime = None) -> Task:

@@ -74,14 +74,18 @@ Just define `POSTPONE_CONFIG` in your processor class as instance of `PostponeCo
 from django_partisan.config.processor_configs import PostponeConfig
 from django_partisan.processor import BaseTaskProcessor
 from django_partisan import registry
+from django_partisan.exceptions import PostponeTask
 
 @registry.register
 class MyProcessor(BaseTaskProcessor):
     POSTPONE_CONFIG = PostponeConfig(
         max_postpones=5
     )
-    def run(self) -> Any:
+    def run(self):
         do_something(*self.args, **self.kwargs)
+
+def do_something(*args, **kwargs):
+    raise PostponeTask(300)  # 5 minutes
 
 ```
 
@@ -107,8 +111,11 @@ class MyProcessor(BaseTaskProcessor):
         retries_count=3, retry_pause=3,
         retry_pause_strategy=const.DELAY_STRATEGY_INCREMENTAL
     )
-    def run(self) -> Any:
+    def run(self):
         do_something(*self.args, **self.kwargs)
+
+def do_something(*args, **kwargs):
+    pass
 ``` 
 
 With such configuration, the task will be redelayed if `TimeoutError` will be rised for 3 times with 3 sec pause.
@@ -124,6 +131,50 @@ With such configuration, the task will be redelayed if `TimeoutError` will be ri
  (with `retry_pause = 3`, and `retries_count = 3` it will redelay for 3, 6, 9 seconds and then fail). 
 
 
+### Separate by queues
+
+If you want to separate your tasks into separate queues, you need to define queues in setting as a dict, 
+where key is a queue name, and value - dict of settings for this queue:
+
+```python
+PARTISAN_CONFIG = {
+    'default': {  # 'default' - is registered name for default queue, it will be exist anyway
+        # ...
+    },
+    'another_queue': {
+        # ...
+    }
+}
+```
+
+Also you need to set queue for your tasks:
+```python
+from django_partisan.processor import BaseTaskProcessor
+from django_partisan import registry
+
+
+@registry.register
+class MyProcessor(BaseTaskProcessor):
+    QUEUE_NAME = 'another_queue'
+    def run(self):
+        do_something(*self.args, **self.kwargs)
+
+def do_something(*args, **kwargs):
+    pass
+
+```
+
+After it you can run partisan to run this queue:
+
+```bash
+$ python manage.py start_partisan --queue_name another_queue
+```
+
+Note:
+* If you will not set `QUEUE_NAME` for `Processor`, it will be `default`;
+* If you will run this command without specifiing `queue_name` it will serve `default` queue;
+* If you will not set settings for queues, the settings will be default for `default` queue;
+
 # Settings
 In your project settings you can define such params as:
 
@@ -136,6 +187,23 @@ queue manager will add new tasks (default = 2);
 * `TASKS_PER_WORKER_INSTANCE` `(Optional[int])` - if is set, the worker will be restarted after this count of 
 tasks processed (default = None);
 * `DELETE_TASKS_ON_COMPLETE` `(bool)` - if True, task object will be deleted from db, if it successfully processed;
+
+But it will be better, if you'll make settings as a dict:
+```python
+PARTISAN_CONFIG = {
+    'default': {  # 'default' - is registered name for default queue, it will be exist anyway
+        'MIN_QUEUE_SIZE':10,
+        'MAX_QUEUE_SIZE':20,
+        'CHECKS_BEFORE_CLEANUP':50,
+        'WORKERS_COUNT':5,
+        'SLEEP_DELAY_SECONDS':5,
+        'TASKS_PER_WORKER_INSTANCE': 50,
+        'DELETE_TASKS_ON_COMPLETE':False,
+        'DEFAULT_POSTPONE_DELAY_SECONDS':5,
+        'DEFAULT_POSTPONES_COUNT':None,
+    }
+}
+```
 
 It is possible to override some of this settings by cli args for `start_partisan`:
 * `--min_queue_size` - `MIN_QUEUE_SIZE`;

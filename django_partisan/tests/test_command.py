@@ -32,6 +32,7 @@ class TestCommand(TestCase):
         )
         manager_mock.assert_called_with(
             **{
+                'queue_name': 'default',
                 self.min_queue_size: 1,
                 self.max_queue_size: 2,
                 self.checks_before_cleanup: 10,

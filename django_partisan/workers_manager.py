@@ -12,14 +12,9 @@ from django import db
 from django.db import Error
 
 from django_partisan.models import Task
-from django_partisan.settings import (
-    MIN_QUEUE_SIZE,
-    MAX_QUEUE_SIZE,
-    CHECKS_BEFORE_CLEANUP,
-    WORKERS_COUNT,
-    SLEEP_DELAY_SECONDS,
-)
 from django_partisan.worker import Worker
+from django_partisan.settings import PARTISAN_CONFIG
+from django_partisan.settings.const import DEFAULT_QUEUE_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -38,22 +33,32 @@ class WorkersManager:
     def __init__(
         self,
         *,
+        queue_name: str = DEFAULT_QUEUE_NAME,
         min_queue_size: int = None,
         max_queue_size: int = None,
         checks_before_cleanup: int = None,
         workers_count: int = None,
-        sleep_delay_seconds: int = None
+        sleep_delay_seconds: int = None,
     ) -> None:
         self.queue: mp.Queue = mp.Queue()
         self.workers: List[mp.Process] = []
 
         self.cleanup_counter = 0
 
-        self.min_queue_size = min_queue_size or MIN_QUEUE_SIZE
-        self.max_queue_size = max_queue_size or MAX_QUEUE_SIZE
-        self.checks_before_cleanup = checks_before_cleanup or CHECKS_BEFORE_CLEANUP
-        self.workers_count = workers_count or WORKERS_COUNT
-        self.sleep_delay_seconds = sleep_delay_seconds or SLEEP_DELAY_SECONDS
+        self.queue_name = queue_name
+        self.settings = PARTISAN_CONFIG.get(queue_name)
+        if not self.settings:
+            raise RuntimeError(f'No settings for queue "{queue_name}" found!')
+
+        self.min_queue_size = min_queue_size or self.settings.MIN_QUEUE_SIZE
+        self.max_queue_size = max_queue_size or self.settings.MAX_QUEUE_SIZE
+        self.checks_before_cleanup = (
+            checks_before_cleanup or self.settings.CHECKS_BEFORE_CLEANUP
+        )
+        self.workers_count = workers_count or self.settings.WORKERS_COUNT
+        self.sleep_delay_seconds = (
+            sleep_delay_seconds or self.settings.SLEEP_DELAY_SECONDS
+        )
 
     def run_partisan(self) -> None:
         global running
@@ -93,7 +98,7 @@ class WorkersManager:
 
     def create_workers(self) -> None:
         for _ in range(self.workers_count):
-            p = Worker(self.queue)
+            p = Worker(self.queue, self.queue_name)
             p.start()
             self.workers.append(p)
 
@@ -104,7 +109,9 @@ class WorkersManager:
         nothing_to_do = True
         qsize = self.queue.qsize()
         if qsize <= self.min_queue_size:
-            task_objs = Task.objects.select_for_process(self.max_queue_size - qsize)
+            task_objs = Task.objects.select_for_process(
+                self.max_queue_size - qsize, self.queue_name
+            )
             if len(task_objs) > 0:
                 nothing_to_do = False
                 for task_obj in task_objs:
@@ -124,7 +131,7 @@ class WorkersManager:
             for i in range(len(self.workers)):  # check children
                 if not self.workers[i].is_alive():
                     self.workers[i].join()
-                    self.workers[i] = Worker(self.queue)
+                    self.workers[i] = Worker(self.queue, self.queue_name)
                     self.workers[i].start()
                     logger.warning("watchdog: worker#%d lost in space, restarted", i)
 

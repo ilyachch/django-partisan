@@ -1,11 +1,12 @@
-from unittest import TestCase
-
+from django.test import TestCase
 from django.utils import timezone
 
+from django_partisan.settings import get_queue_settings
 from django_partisan.config import const
 from django_partisan.config.processor_configs import ErrorsHandleConfig, PostponeConfig
 from django_partisan.exceptions import PostponeTask
-from django_partisan import settings
+
+settings = get_queue_settings()
 
 
 class TestErrorsHandleConfig(TestCase):

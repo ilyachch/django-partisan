@@ -10,6 +10,11 @@ class TestBackgroundWorker(TestCase):
     def setUp(self):
         self.logger = logging.getLogger('django_partisan.worker')
 
+    def test_bad_settings(self):
+        queue = Mock()
+        with self.assertRaises(RuntimeError):
+            Worker(queue, 'some_bad_queue_name')
+
     def test_none_in_queue(self):
         queue = Mock()
         queue.get = MagicMock(return_value=None)

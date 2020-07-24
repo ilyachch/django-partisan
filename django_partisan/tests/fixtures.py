@@ -1,6 +1,6 @@
 from django_partisan.config.processor_configs import ErrorsHandleConfig, PostponeConfig
-from django_partisan.processor import BaseTaskProcessor
 from django_partisan.exceptions import PostponeTask
+from django_partisan.processor import BaseTaskProcessor
 
 
 class TestTaskProcessor(BaseTaskProcessor):

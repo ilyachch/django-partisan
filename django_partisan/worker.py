@@ -8,19 +8,27 @@ from typing import Optional
 import setproctitle
 from django import db
 
-from django_partisan import settings
+from django_partisan.settings import PARTISAN_CONFIG
+from django_partisan.settings.const import DEFAULT_QUEUE_NAME
 
 logger = logging.getLogger(__name__)
 
 
 class Worker(mp.Process):
     def __init__(
-        self, queue: mp.Queue, tasks_before_death: Optional[int] = None
+        self,
+        queue: mp.Queue,
+        queue_name: str = DEFAULT_QUEUE_NAME,
+        tasks_before_death: Optional[int] = None,
     ) -> None:
         super().__init__()
         self.queue = queue
+        self.queue_name = queue_name
+        self.settings = PARTISAN_CONFIG.get(self.queue_name)
+        if not self.settings:
+            raise RuntimeError(f'No settings for queue "{queue_name}" found!')
         self.tasks_before_death = (
-            tasks_before_death or settings.TASKS_PER_WORKER_INSTANCE
+            tasks_before_death or self.settings.TASKS_PER_WORKER_INSTANCE
         )
         self.tasks_processed = 0
 

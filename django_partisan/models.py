@@ -6,9 +6,9 @@ from django.db import models, transaction
 from django.db.models import QuerySet
 from django.utils import timezone
 
-from django_partisan import settings
 from django_partisan.config.processor_configs import PostponeConfig, ErrorsHandleConfig
 from django_partisan.exceptions import PostponeTask, MaxPostponesReached
+from django_partisan.settings import get_queue_settings, const
 
 if TYPE_CHECKING:
     from django_partisan.processor import BaseTaskProcessor  # pragma: no cover
@@ -25,11 +25,17 @@ class TasksManager(models.Manager):
         ).update(status=Task.STATUS_NEW)
 
     @transaction.atomic
-    def select_for_process(self, count: Optional[int] = None) -> QuerySet:
+    def select_for_process(
+        self, count: Optional[int] = None, queue_name: str = const.DEFAULT_QUEUE_NAME
+    ) -> QuerySet:
         base_qs = (
             self.get_queryset()
             .select_for_update()
-            .filter(status=Task.STATUS_NEW, execute_after__lte=timezone.now())
+            .filter(
+                status=Task.STATUS_NEW,
+                execute_after__lte=timezone.now(),
+                queue_name=queue_name,
+            )
         )
         if count is not None:
             base_qs = base_qs[:count]
@@ -55,24 +61,27 @@ class Task(models.Model):
         (STATUS_FINISHED, 'Finished'),
     )
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_NEW)  # type: ignore
-    created_at = models.DateTimeField(auto_now_add=True)  # type: ignore
-    updated_at = models.DateTimeField(auto_now=True)  # type: ignore
-    processor_class = models.CharField(max_length=128)  # type: ignore
-    priority = models.IntegerField(default=10)  # type: ignore
-    execute_after = models.DateTimeField(default=timezone.now)  # type: ignore
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_NEW)
+    queue_name = models.CharField(max_length=50, default=const.DEFAULT_QUEUE_NAME)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    processor_class = models.CharField(max_length=128)
+    priority = models.IntegerField(default=10)
+    execute_after = models.DateTimeField(default=timezone.now)
     arguments = JSONField(default=dict)
-    extra = JSONField(null=True, blank=True)
+    extra = JSONField(default=dict)
 
     objects = TasksManager()
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.settings = get_queue_settings(self.queue_name)
 
     def get_initialized_processor(self) -> 'BaseTaskProcessor':
         from django_partisan.processor import BaseTaskProcessor
 
-        args = self.arguments.get('args', [])
-        kwargs = self.arguments.get('kwargs', {})
         processor_class = BaseTaskProcessor.get_processor_class(self.processor_class)
-        return processor_class(*args, task=self, **kwargs)
+        return processor_class.get_initialized_processor(self)
 
     def run(self) -> Any:
         processor = self.get_initialized_processor()
@@ -100,8 +109,8 @@ class Task(models.Model):
             postpones_config is not None
             and postpone_num > postpones_config.max_postpones
         ) or (
-            settings.DEFAULT_POSTPONES_COUNT is not None
-            and postpone_num > settings.DEFAULT_POSTPONES_COUNT
+            self.settings.DEFAULT_POSTPONES_COUNT is not None
+            and postpone_num > self.settings.DEFAULT_POSTPONES_COUNT
         ):
             raise MaxPostponesReached(postpone_num)
         self.postpones_count = postpone_num
@@ -124,7 +133,7 @@ class Task(models.Model):
         processor.delay_for_retry(execute_after=new_start_time_for_task)
 
     def complete(self) -> None:
-        if settings.DELETE_TASKS_ON_COMPLETE:
+        if self.settings.DELETE_TASKS_ON_COMPLETE:
             self.delete()
             return
         self.status = self.STATUS_FINISHED
@@ -137,32 +146,22 @@ class Task(models.Model):
 
     @property
     def postpones_count(self) -> int:
-        if self.extra is None:
-            return 0
         return self.extra.get('postpones', {'count': 0}).get('count')
 
     @postpones_count.setter
     def postpones_count(self, num: int) -> None:
-        if self.extra is None:
-            extra_data = {'postpones': {'count': 0}}
-        else:
-            extra_data = self.extra.get('postpones', {'count': 0})
+        extra_data = self.extra.get('postpones', {'count': 0})
         extra_data.update({'postpones': {'count': num}})
         self.extra = extra_data
         self.save(update_fields=['updated_at', 'extra'])
 
     @property
     def tries_count(self) -> int:
-        if self.extra is None:
-            return 0
         return self.extra.get('retries', {'count': 0}).get('count')
 
     @tries_count.setter
     def tries_count(self, num: int) -> None:
-        if self.extra is None:
-            extra_data = {'retries': {'count': 0}}
-        else:
-            extra_data = self.extra.get('retries', {'count': 0})
+        extra_data = self.extra.get('retries', {'count': 0})
         extra_data.update({'retries': {'count': num}})
         self.extra = extra_data
         self.save(update_fields=['updated_at', 'extra'])
