@@ -1,13 +1,18 @@
 [![codecov](https://codecov.io/gh/ilyachch/django-partisan/branch/master/graph/badge.svg)](https://codecov.io/gh/ilyachch/django-partisan)
 
 [![PyPI version](https://badge.fury.io/py/django-partisan.svg)](https://pypi.org/project/django-partisan/)
-![PyPI - Downloads](https://img.shields.io/pypi/dm/django-partisan)
+[![Downloads](https://pepy.tech/badge/django-partisan)](https://pepy.tech/project/django-partisan)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/django-partisan.svg)](https://pypi.org/project/django-partisan/)
 
 # django-backgroud-tasks-framework
 Framework to allow creating background tasks in django without MQ
 
 # Usage
+
+## Requirements
+Python versions: 3.6+
+
+Django versions: 1.9+
 
 ## General usage
 Install app with:
@@ -39,7 +44,7 @@ class MyProcessor(BaseTaskProcessor):
 
 ```
 
-And then pospone this task:
+And then put this task to queue:
 ```python
 from partisan_tasks import MyProcessor
 
@@ -230,3 +235,15 @@ It is possible to override some of this settings by cli args for `start_partisan
 * After Manager process got a kill signal, it will wait for workers to finish their jobs, and gracefully shut down them;
 * If for some reason Manager process was killed without gracefull shut down, 
 after restart it will take for work tasks, that were not finished and only after them it will take all other tasks;
+
+# Contributing 
+If you experience any problems with usage of this package, 
+feel free to open an issue or pull-request
+
+Pull-request requirements:
+* Code style according to PEP-8 (use `make black` for it);
+* 100% test coverage (use `make coverage`);
+* Typing (use `make check_mypy`;
+* Version bump (you can use `make major_release`, `make minor_release`, `make patch_release` for it)
+
+All this checks are in CI

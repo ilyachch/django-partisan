@@ -11,6 +11,7 @@ jobs:
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8]
+        django-version: [1, 2, 3]
     services:
       postgres:
         image: postgres
@@ -24,7 +25,7 @@ jobs:
       - name: Getting code
         uses: actions/checkout@v1
       - name: Getting Python
-        uses: actions/setup-python@master
+        uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -34,7 +35,7 @@ jobs:
           path: .venv
           key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ matrix.django-version }}-
       - name: Getting Poetry
         uses: dschep/install-poetry-action@v1.3
       - name: Config Poetry
@@ -42,18 +43,20 @@ jobs:
           poetry config virtualenvs.create true
           poetry config virtualenvs.in-project true
       - name: Installing dependencies
-        run: poetry install
+        run: |
+          poetry install
+          poetry add "django==${{ matrix.django-version }}.*"
 
       - name: Running tests
         run: make coverage
       - name: Running coverage check
-        if: ${{ matrix.python-version == 3.6 }}
+        if: ${{ matrix.python-version == 3.6 && matrix.django-version == 3 }}
         run: make coverage_cmd_report
       - name: Generate coverage report
-        if: ${{ matrix.python-version == 3.6 }}
+        if: ${{ matrix.python-version == 3.6 && matrix.django-version == 3 }}
         run: make coverage_xml_report
       - name: Upload coverage to Codecov
-        if: ${{ matrix.python-version == 3.6 }}
+        if: ${{ matrix.python-version == 3.6 && matrix.django-version == 3 }}
         uses: codecov/codecov-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -67,7 +70,7 @@ jobs:
       - name: Getting code
         uses: actions/checkout@v1
       - name: Getting Python
-        uses: actions/setup-python@master
+        uses: actions/setup-python@v2
       - name: Cache pip
         uses: actions/cache@v2
         with:
@@ -93,7 +96,7 @@ jobs:
       - name: Getting code
         uses: actions/checkout@v1
       - name: Getting Python
-        uses: actions/setup-python@master
+        uses: actions/setup-python@v2
       - name: Cache pip
         uses: actions/cache@v2
         with:
@@ -119,7 +122,7 @@ jobs:
       - name: Getting code
         uses: actions/checkout@v1
       - name: Getting Python
-        uses: actions/setup-python@master
+        uses: actions/setup-python@v2
       - name: Getting Poetry
         uses: dschep/install-poetry-action@v1.3
       - name: Check if pyproject is changed

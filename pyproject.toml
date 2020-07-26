@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-partisan"
-version = "1.4.0"
+version = "1.4.1"
 description = "Framework to allow creating background tasks in django without MQ"
 authors = ["Ilya Chichak <ilyachch@gmail.com>"]
 license = "MIT"
@@ -16,7 +16,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.6"
-Django = "^2"
+Django = "^1.9 || ^2 || ^3"
 psycopg2-binary = "2.8.2"
 pytz = "2019.1"
 setproctitle = "1.1.10"
