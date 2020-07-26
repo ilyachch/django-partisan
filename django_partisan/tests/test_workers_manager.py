@@ -22,8 +22,10 @@ class TestWorkersManager(TestCase):
     @patch.object(WorkersManager, 'flush_queue')
     @patch.object(WorkersManager, 'manage_workers')
     @patch.object(WorkersManager, 'manage_queue')
+    @patch.object(WorkersManager, 'create_workers')
     def test_partisan(
         self,
+        create_workers_mock,
         manage_queue_mock,
         manage_workers_mock,
         flush_queue_mock,
@@ -50,6 +52,7 @@ class TestWorkersManager(TestCase):
                 call("Exit after %d seconds", ANY),
             ]
         )
+        create_workers_mock.assert_called()
         manage_queue_mock.assert_called()
         manage_workers_mock.assert_called()
         flush_queue_mock.assert_called_once()
