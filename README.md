@@ -44,6 +44,10 @@ class MyProcessor(BaseTaskProcessor):
 
 ```
 
+> Please note, that all tasks should be in module `partisan_tasks.py` in root of your application. 
+> You can write them there or just import from your preferable place. 
+> It's needed to make autodiscover available
+
 And then put this task to queue:
 ```python
 from partisan_tasks import MyProcessor

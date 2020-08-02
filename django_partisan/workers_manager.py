@@ -12,9 +12,10 @@ from django import db
 from django.db import Error
 
 from django_partisan.models import Task
-from django_partisan.worker import Worker
+from django_partisan.registry import initialize_processors
 from django_partisan.settings import PARTISAN_CONFIG
 from django_partisan.settings.const import DEFAULT_QUEUE_NAME
+from django_partisan.worker import Worker
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,8 @@ class WorkersManager:
         logger.info("Starting background parser")
 
         now = datetime.datetime.now()
+
+        initialize_processors()
 
         db.connections.close_all()
         setproctitle.setproctitle("partisan/parent")
@@ -128,7 +131,7 @@ class WorkersManager:
         """
         self.cleanup_counter += 1
         if self.cleanup_counter >= self.checks_before_cleanup:
-            db.connections.close_all()
+            # db.connections.close_all()
             self.cleanup_counter = 0
             for i in range(len(self.workers)):  # check children
                 if not self.workers[i].is_alive():

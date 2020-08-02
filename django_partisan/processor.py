@@ -8,7 +8,7 @@ from django.utils import timezone
 from django_partisan.config.processor_configs import ErrorsHandleConfig, PostponeConfig
 from django_partisan.exceptions import ProcessorClassNotFound
 from django_partisan.models import Task
-from django_partisan.registry import registry
+from django_partisan.registry.registry import registry
 
 
 class BaseTaskProcessor(abc.ABC):

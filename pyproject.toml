@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-partisan"
-version = "1.5.0"
+version = "1.6.0"
 description = "Framework to allow creating background tasks in django without MQ"
 authors = ["Ilya Chichak <ilyachch@gmail.com>"]
 license = "MIT"
@@ -11,6 +11,7 @@ classifiers = [
     "Framework :: Django",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3 :: Only",
+    "Operating System :: POSIX :: Linux",
     "Typing :: Typed"
 ]
 
@@ -59,6 +60,7 @@ fail_under = 100
 
 exclude_lines = [
     '# pragma: no cover',
+    'if TYPE_CHECKING:'
 ]
 
 # Build section

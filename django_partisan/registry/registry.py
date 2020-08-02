@@ -6,7 +6,7 @@ from django_partisan.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from django_partisan.processor import BaseTaskProcessor  # pragma: no cover
+    from django_partisan.processor import BaseTaskProcessor
 
 
 class Registry:

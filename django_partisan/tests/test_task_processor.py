@@ -107,7 +107,7 @@ class TestTaskProcessor(TestCase):
 
     def test_task_delay_for_retry(self):
         SimpleTaskProcessor(10).delay()
-        task = Task.objects.select_for_process().first()
+        task = Task.objects.select_for_process()[0]
         processor = task.get_initialized_processor()
         processor.delay_for_retry()
         self.assertEqual(task.STATUS_NEW, task.status)

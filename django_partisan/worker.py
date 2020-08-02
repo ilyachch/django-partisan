@@ -3,13 +3,16 @@ import multiprocessing as mp
 import os
 import signal
 from queue import Empty
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 import setproctitle
 from django import db
 
 from django_partisan.settings import PARTISAN_CONFIG
 from django_partisan.settings.const import DEFAULT_QUEUE_NAME
+
+if TYPE_CHECKING:
+    from django_partisan.models import Task
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +44,7 @@ class Worker(mp.Process):
         try:
             while self.shoud_process_tasks():
                 try:
-                    task = self.queue.get(timeout=5)
+                    task: Optional['Task'] = self.queue.get(timeout=5)
                     if task is None:
                         logger.info('Worker stopped')
                         return
@@ -53,11 +56,10 @@ class Worker(mp.Process):
                 try:
                     task.run()
                     self.tasks_processed += 1
+                    task.complete()
                 except Exception as err:
                     task.fail(err)
                     raise
-                finally:
-                    db.connections.close_all()
             else:
                 logger.info(
                     'Processed %d of %d tasks. Exiting',

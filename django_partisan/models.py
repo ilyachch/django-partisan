@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Optional, Any, TYPE_CHECKING
+from typing import Optional, Any, TYPE_CHECKING, List
 
 from django.contrib.postgres.fields import JSONField
 from django.db import models, transaction
@@ -11,7 +11,7 @@ from django_partisan.exceptions import PostponeTask, MaxPostponesReached
 from django_partisan.settings import get_queue_settings, const
 
 if TYPE_CHECKING:
-    from django_partisan.processor import BaseTaskProcessor  # pragma: no cover
+    from django_partisan.processor import BaseTaskProcessor
 
 
 class TasksManager(models.Manager):
@@ -27,7 +27,7 @@ class TasksManager(models.Manager):
     @transaction.atomic
     def select_for_process(
         self, count: Optional[int] = None, queue_name: str = const.DEFAULT_QUEUE_NAME
-    ) -> QuerySet:
+    ) -> List['Task']:
         base_qs = (
             self.get_queryset()
             .select_for_update()
@@ -38,7 +38,7 @@ class TasksManager(models.Manager):
             )
         )
         if count is not None:
-            base_qs = base_qs[:count]
+            base_qs = base_qs.all()[:count]
         new_tasks_list = list(base_qs.values_list('pk', flat=True))
         selected_tasks = (
             self.get_queryset().select_for_update().filter(id__in=new_tasks_list)
@@ -46,7 +46,7 @@ class TasksManager(models.Manager):
         self.get_queryset().select_for_update().filter(id__in=new_tasks_list).update(
             status=Task.STATUS_IN_PROCESS
         )
-        return selected_tasks
+        return list(selected_tasks)
 
 
 class Task(models.Model):

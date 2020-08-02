@@ -45,25 +45,25 @@ class TestTaskModel(TestCase):
         self.assertEqual(len(tasks), 5)
 
     def test_task_complete(self):
-        task = Task.objects.select_for_process().first()
+        task = Task.objects.select_for_process()[0]
         task.complete()
         self.assertEqual(task.status, Task.STATUS_FINISHED)
 
     def test_task_fail(self):
         exception_text = 'Some exception text'
-        task = Task.objects.select_for_process().first()
+        task = Task.objects.select_for_process()[0]
         task.fail(Exception(exception_text))
         self.assertEqual(task.status, Task.STATUS_ERROR)
         self.assertEqual(task.extra, {'message': exception_text})
 
     def test_task_deling_on_complete(self):
-        task = Task.objects.select_for_process().first()
+        task = Task.objects.select_for_process()[0]
         with mock.patch.object(settings, 'DELETE_TASKS_ON_COMPLETE', return_value=True):
             task.complete()
         self.assertEqual(Task.objects.count(), 9)
 
     def test_tries_count(self):
-        task = Task.objects.select_for_process().first()
+        task = Task.objects.select_for_process()[0]
         self.assertEqual(task.tries_count, 0)
         task.tries_count = 3
         self.assertEqual(task.tries_count, 3)

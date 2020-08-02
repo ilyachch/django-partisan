@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from django_partisan import registry
+from django_partisan.registry import registry
 from django_partisan.exceptions import (
     ProcessorClassNotFound,
     ProcessorClassAlreadyRegistered,
