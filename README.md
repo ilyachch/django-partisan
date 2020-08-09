@@ -240,6 +240,12 @@ It is possible to override some of this settings by cli args for `start_partisan
 * If for some reason Manager process was killed without gracefull shut down, 
 after restart it will take for work tasks, that were not finished and only after them it will take all other tasks;
 
+# Known issues
+* This tool can be launched on MacOS, but it's strongly recomened to use it only with Linux as multiprocessing Queue 
+not fully compatible with MacOS. Use it on MacOS only for development and debugging.
+* After calling SIG_TERM, tool can cause some exceptions. It does't break anything and I'm trying to fix it. 
+Don't worry about it
+
 # Contributing 
 If you experience any problems with usage of this package, 
 feel free to open an issue or pull-request

@@ -61,3 +61,8 @@ WORKERS_COUNT = mp.cpu_count()
 SLEEP_DELAY_SECONDS = 2
 TASKS_PER_WORKER_INSTANCE = None
 DELETE_TASKS_ON_COMPLETE = False
+
+print(os.environ)
+
+if not os.getenv('CHECK_MYPY'):
+    from .test_settings import *

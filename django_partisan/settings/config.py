@@ -53,7 +53,7 @@ PARTISAN_CONFIG = {
 
 PARTISAN_CONFIG.update(
     {
-        queue_name: QueueSettings(**queue_config)
+        queue_name: QueueSettings(**get_merged_config(queue_config))
         for queue_name, queue_config in getattr(settings, 'PARTISAN_CONFIG', {}).items()
     }
 )

@@ -16,7 +16,7 @@ check_black:
 	@poetry run black -S --diff --check $(PROJECT_FOLDER)
 
 check_mypy:
-	@poetry run mypy $(PROJECT_FOLDER)
+	@CHECK_MYPY=1 poetry run mypy $(PROJECT_FOLDER)
 
 # Coverage section
 coverage:

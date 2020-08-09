@@ -16,6 +16,8 @@ from django_partisan.registry import initialize_processors
 from django_partisan.settings import PARTISAN_CONFIG
 from django_partisan.settings.const import DEFAULT_QUEUE_NAME
 from django_partisan.worker import Worker
+from django_partisan.utils import Queue  # type: ignore
+
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +43,7 @@ class WorkersManager:
         workers_count: int = None,
         sleep_delay_seconds: int = None,
     ) -> None:
-        self.queue: mp.Queue = mp.Queue()
+        self.queue: mp.Queue = Queue()
         self.workers: List[mp.Process] = []
 
         self.cleanup_counter = 0
